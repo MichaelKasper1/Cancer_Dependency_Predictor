@@ -58,5 +58,4 @@ Use a make command to concurrently
     make start
     ```
 
-Follow the directions in your terminal to open in your browser once the server is started:
-http://127.0.0.1:8000/
+When you save changes to files, the app will reload automatically. Follow link in terminal to access website.

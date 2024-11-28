@@ -69,7 +69,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
 # Database section not needed because mongoDB bypassed django ORM with pyMongo.
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 # DATABASES = {
@@ -78,8 +77,6 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

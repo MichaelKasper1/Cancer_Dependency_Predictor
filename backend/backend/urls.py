@@ -16,7 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from predict import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/get-column-names', views.get_column_names, name='get_column_names'),
+    path('api/reset-backend-data', views.reset_backend_data, name='reset_backend_data'),
 ]

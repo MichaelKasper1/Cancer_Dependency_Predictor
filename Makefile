@@ -37,7 +37,7 @@ runserver:
 
 # start frontend server
 rundev:
-	cd $(FRONTEND_DIR) && $(NPM) run serve
+	cd $(FRONTEND_DIR) && $(NPM) run dev
 
 # this build frontend can additionally be used for a final production build (instead of run serve it will just build)
 build-frontend:

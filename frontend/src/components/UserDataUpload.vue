@@ -1,7 +1,5 @@
 <template>
   <div class="user-data-input">
-    <!-- <h2>User Data Input</h2> -->
-    
     <div class="columns">
       <!-- Column 1: Choose Model -->
       <div class="column">
@@ -32,10 +30,10 @@
           </label>
           <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload">
           <p v-if="uploadedFileName"><br>{{ uploadedFileName }}</p>
-          <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+          <p v-if="fileError" class="error-message">{{ fileError }}</p>
         </div>
         <div class="input-group">
-          <button @click="submitExample">Submit Example</button>
+          <button @click="submitExample">Use Example Data</button>
         </div>
       </div>
 
@@ -54,11 +52,12 @@
         <div class="input-group">
           <p>Is your data from a cell line or a tumor?</p>
           <label>
-            <input type="radio" value="tumor" v-model="dataSource"> Tumor
+            <input type="radio" value="tumor" v-model="dataSource" :disabled="selectedModel === 'Elastic Net Models'"> Tumor
           </label>
           <label>
             <input type="radio" value="cell-line" v-model="dataSource"> Cell Line
           </label>
+          <div v-if="selectedModel === 'Elastic Net Models'">Tumor predictions only available for DeepDEP.</div>
         </div>
         <div class="input-group">
           <p>Is your data stored as a normalized expression unit?</p>
@@ -94,194 +93,132 @@
   </div>
 </template>
 
-<script>
-import EventBus from '../utils/eventBus';
+<script lang="ts">
+import { defineComponent } from 'vue';
 
-export default {
+export default defineComponent({
   data() {
     return {
-      file: null,
+      selectedModel: 'DeepDEP',
+      logTransformed: 'not-log',
+      dataSource: 'Tumor',
+      expressionUnit: 'TPM',
+      selectedGeneSet: '',
+      columnNames: [], // This will be populated from the backend
+      fileError: '',
+      exampleData: '', // This will be populated from the backend
       uploadedFileName: '',
-      selectedGeneSet: 'default-gene-set',
-      logTransformed: 'log', // Default to Yes
-      dataSource: 'tumor', // Default to tumor
-      expressionUnit: 'TPM', // Default to TPM
-      selectedModel: 'DeepDEP', // Default to DeepDEP
-      columnNames: [],
-      errorMessage: '' // Add an error message property
+      errorMessage: '',
     };
   },
   methods: {
-    fetchColumnNames() {
-      fetch('/api/column-names/')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Fetched data:', data); // Log the fetched data
-          this.columnNames = data.column_names;
-          console.log('Updated columnNames:', this.columnNames); // Log the updated columnNames
-        })
-        .catch(error => {
-          console.error('Error fetching column names:', error);
-        });
-    },
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        this.validateFile(file)
-          .then(isValid => {
-            if (isValid) {
-              this.file = file; // Store the file in the data property
-              this.uploadedFileName = file.name; // Update the uploaded file name
-              this.errorMessage = ''; // Clear any previous error messages
-              console.log('File uploaded:', file);
-            } else {
-              this.file = null;
-              this.uploadedFileName = '';
-            }
-          })
-          .catch(error => {
-            this.errorMessage = error.message;
-            this.file = null;
-            this.uploadedFileName = '';
-          });
-      }
-    },
-    validateFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const content = e.target.result;
-          const lines = content.split('\n');
-
-          // ensure file has more than 2 rows
-          if (lines.length < 2) {
-            reject(new Error('File is too short. Must include more than one row.'));
-            return;
-          }
-
-          // add a check to make sure the data uploaded has atleast 2 columns
-          const header = lines[0].split(/\t|,/);
-          if (header.length < 2) {
-            reject(new Error('File must have at least 2 columns. One for a gene symbol, atleast one for expression values.'));
-            return;
-          }
-          
-          // ensure the first column has strings for the data and print warning if not
-          const firstRow = lines[1].split(/\t|,/);
-          if (isNaN(firstRow[0])) {
-            console.warn('First column should contain gene symbols. If not, please ensure the gene symbols are in the first column.');
-          }
-
-          // ensure that the second column has numbers for the data other than the first row or they can atleast be coerced to numbers
-          const secondRow = lines[1].split(/\t|,/);
-          if (isNaN(secondRow[1])) {
-            reject(new Error('Second column must contain numeric values for gene expression.'));
-            return;
-          }
-
-          // add other user input data checks here
-
-          resolve(true);
-        };
-
-        reader.onerror = () => {
-          reject(new Error('Error reading file.'));
-        };
-
-        reader.readAsText(file);
-      });
-    },
-    getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
-    },
     submitForm() {
-      if (!this.file) {
-        this.errorMessage = 'No file selected or file is invalid.';
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('selectedGeneSet', this.selectedGeneSet);
-      formData.append('logTransformed', this.logTransformed);
-      formData.append('dataSource', this.dataSource);
-      formData.append('expressionUnit', this.expressionUnit);
-      formData.append('selectedModel', this.selectedModel);
-      formData.append('file', this.file);
-
-      const csrftoken = this.getCookie('csrftoken');
-
-      fetch('/api/process-data/', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-CSRFToken': csrftoken
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Response from backend:', data);
-        if (data.status === 'success') {
-          EventBus.emit('dataProcessed', data); // Emit the event using EventBus
-        } else {
-          console.error('Error:', data.error);
-        }
-      })
-      .catch(error => {
-        console.error('Error uploading file:', error);
-      });
+      // Handle form submission
     },
+    // handleFileUpload(event: Event) {
+    //   const file = (event.target as HTMLInputElement).files?.[0];
+    //   if (!file) return;
+
+    //   const reader = new FileReader();
+    //   reader.onload = (e) => {
+    //     const content = e.target?.result as string;
+    //     const lines = content.split('\n');
+
+    //     // Ensure file has more than 2 rows
+    //     if (lines.length < 2) {
+    //       this.fileError = 'File is too short. Must include more than one row.';
+    //       return;
+    //     }
+
+    //     // Ensure the data has at least 2 columns
+    //     const header = lines[0].split(/\t|,/);
+    //     if (header.length < 2) {
+    //       this.fileError = 'File must have at least 2 columns. One for a gene symbol, at least one for expression values.';
+    //       return;
+    //     }
+
+    //     // Ensure the first column has strings for the data
+    //     const firstRow = lines[1].split(/\t|,/);
+    //     if (!isNaN(Number(firstRow[0]))) {
+    //       console.warn('First column should contain gene symbols. Please ensure the gene symbols are in the first column.');
+    //     }
+
+    //     // Ensure the second column has numbers for the data
+    //     const secondRow = lines[1].split(/\t|,/);
+    //     if (isNaN(Number(secondRow[1]))) {
+    //       this.fileError = 'Second column must contain numeric values for gene expression.';
+    //       return;
+    //     }
+
+    //     this.fileError = ''; // Clear any previous errors
+    //     this.uploadedFileName = file.name;
+    //     // Process the file content
+    //   };
+
+    //   reader.readAsText(file);
+    // },
     submitExample() {
-      const formData = new FormData();
-      formData.append('selectedGeneSet', this.selectedGeneSet);
-      formData.append('logTransformed', this.logTransformed);
-      formData.append('dataSource', this.dataSource);
-      formData.append('expressionUnit', this.expressionUnit);
-      formData.append('selectedModel', this.selectedModel);
-      formData.append('example', true);
-
-      const csrftoken = this.getCookie('csrftoken');
-
-      fetch('/api/process-data/', {
+      // Populate the upload data with example data
+      this.uploadedFileName = 'example_data.txt';
+      this.fileError = '';
+    },
+    resetBackendData() {
+      fetch('/api/reset-backend-data', {
         method: 'POST',
-        body: formData,
         headers: {
-          'X-CSRFToken': csrftoken
-        }
-      })
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedModel: this.selectedModel,
+          logTransformed: this.logTransformed,
+          dataSource: this.dataSource,
+          expressionUnit: this.expressionUnit,
+          selectedGeneSet: this.selectedGeneSet,
+        }),
+      });
+      // Hide other components
+    },
+  },
+  watch: {
+    selectedModel(newVal) {
+      if (newVal === 'Elastic Net Models') {
+        this.dataSource = 'cell-line';
+        // Display message and disable Tumor option
+      }
+      this.resetBackendData();
+    },
+    dataSource(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.resetBackendData();
+      }
+    },
+    selectedGeneSet(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.resetBackendData();
+      }
+    },
+    logTransformed(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.resetBackendData();
+      }
+    },
+    expressionUnit(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.resetBackendData();
+      }
+    },
+  },
+  mounted() {
+    // Fetch column names and example data from the backend
+    fetch('/api/get-column-names')
       .then(response => response.json())
       .then(data => {
-        console.log('Response from backend:', data);
-        if (data.status === 'success') {
-          EventBus.emit('dataProcessed', data); // Emit the event using EventBus
-        } else {
-          console.error('Error:', data.error);
-        }
-      })
-      .catch(error => {
-        console.error('Error uploading file:', error);
+        console.log("Column names:", data.columnNames);
+        this.columnNames = data.columnNames;
+        this.exampleData = data.exampleData;
       });
-    }
   },
-  created() {
-    this.fetchColumnNames();
-  }
-};
+});
 </script>
 
 <style scoped>

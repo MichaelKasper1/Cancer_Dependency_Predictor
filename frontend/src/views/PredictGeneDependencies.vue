@@ -1,13 +1,33 @@
 <template>
   <div class="predict">
     <h1>Predict Gene Dependencies</h1>
-    <p>Content for Predict Gene Dependencies page.</p>
+    <UserDataUpload/>
+    <!-- <PredictedDependenciesTable/>
+    <WaterfallPlot/>
+    <GseaTable/>
+    <GseaPlot/>
+    <DependencyPlots/> -->
   </div>
 </template>
 
 <script>
+import UserDataUpload from '../components/UserDataUpload.vue';
+// import PredictedDependenciesTable from './components/PredictedDependenciesTable.vue';
+// import WaterfallPlot from './components/WaterfallPlot.vue';
+// import GseaTable from './components/GseaTable.vue';
+// import GseaPlot from './components/GseaPlot.vue';
+// import DependencyPlots from './components/DependencyPlots.vue';
+
 export default {
-  name: 'PredictGeneDependencies'
+  name: 'PredictGeneDependencies',
+  components: {
+    UserDataUpload,
+    // PredictedDependenciesTable,
+    // WaterfallPlot,
+    // GseaTable,
+    // GseaPlot,
+    // DependencyPlots,
+  }
 }
 </script>
 

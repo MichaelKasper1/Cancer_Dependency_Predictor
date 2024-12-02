@@ -4,6 +4,8 @@ import plotly.graph_objs as go # type: ignore
 
 # load django libraries
 from pymongo import MongoClient # type: ignore
+from rest_framework.decorators import api_view # type: ignore
+from rest_framework.response import Response #type: ignore
 
 # load custom functions for application
 # from .preprocess import preprocess
@@ -29,7 +31,7 @@ db = client['mongodb']
 
 def load_mongo_data(collection_name):
     collection = db[collection_name]
-    data_records = collection.find({}, {'_id': 0, 'source_file': 0})  # Exclude the _id field
+    data_records = collection.find({}, {'_id': 0, 'source_file': 0})
     return pd.DataFrame(list(data_records))
 
 # example data for example submit button
@@ -55,3 +57,19 @@ tcga_clinicalData = load_mongo_data('tcga_clinicalData')
 
 # additional data for figure 6 and 7
 cell_info = load_mongo_data('cell_info_21Q3_PrimaryTypeFixed')
+
+@api_view(['GET'])
+def get_column_names(request):
+    column_names = list(C2_cp.columns) + list(hallmark.columns)  # Combine column names from both datasets
+    print("C2_cp columns:", list(C2_cp.columns))
+    print("Hallmark columns:", list(hallmark.columns))
+    example_data = example_exp_file.to_csv(index=False, sep='\t')  # Convert example data to CSV format
+    return Response({'columnNames': column_names, 'exampleData': example_data})
+
+@api_view(['POST'])
+def reset_backend_data(request):
+    if request.method == 'POST':
+        # Logic to reset backend data
+
+        return Response({'status': 'success'})
+    return Response({'status': 'error'}, status=400)

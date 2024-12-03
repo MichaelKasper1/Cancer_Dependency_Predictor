@@ -15,11 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from predict import views
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/get-column-names', views.get_column_names, name='get_column_names'),
-    path('api/reset-backend-data', views.reset_backend_data, name='reset_backend_data'),
+    path('api/', include('predict.urls')),
+    # path('api/', include('tcga.urls')),
 ]

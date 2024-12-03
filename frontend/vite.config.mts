@@ -8,4 +8,13 @@ export default defineConfig({
     '__VUE_PROD_DEVTOOLS__': JSON.stringify(false),
     '__VUE_PROD_HYDRATION_MISMATCH_DETAILS__': JSON.stringify(false),
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',  // Django backend URL
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

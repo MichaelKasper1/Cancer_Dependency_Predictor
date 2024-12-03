@@ -28,12 +28,13 @@
           <label for="file-upload" class="custom-file-upload">
             Upload Data (TXT, CSV)
           </label>
-          <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload">
+          <input id="file-upload" type="file" accept=".txt, .csv">
+          <!-- @change="handleFileUpload"> -->
           <p v-if="uploadedFileName"><br>{{ uploadedFileName }}</p>
           <p v-if="fileError" class="error-message">{{ fileError }}</p>
         </div>
         <div class="input-group">
-          <button @click="submitExample">Use Example Data</button>
+          <button @click="useExample">Use Example Data</button>
         </div>
       </div>
 
@@ -88,31 +89,31 @@
 
     <!-- Submit button -->
     <div class="input-group">
-      <button @click="submitForm">Submit</button>
+      <button @click="submit">Submit</button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+console.log('UserDataUpload.vue loaded');
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   data() {
     return {
       selectedModel: 'DeepDEP',
-      logTransformed: 'not-log',
-      dataSource: 'Tumor',
+      logTransformed: 'log',
+      dataSource: 'tumor',
       expressionUnit: 'TPM',
-      selectedGeneSet: '',
+      selectedGeneSet: 'default-gene-set',
       columnNames: [], // This will be populated from the backend
       fileError: '',
-      exampleData: '', // This will be populated from the backend
       uploadedFileName: '',
       errorMessage: '',
     };
   },
   methods: {
-    submitForm() {
+    submit() {
       // Handle form submission
     },
     // handleFileUpload(event: Event) {
@@ -157,10 +158,25 @@ export default defineComponent({
 
     //   reader.readAsText(file);
     // },
-    submitExample() {
+    useExample() {
       // Populate the upload data with example data
       this.uploadedFileName = 'example_data.txt';
       this.fileError = '';
+    },
+    fetchColumnNames() {
+      fetch('/api/get-column-names')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.columnNames = data.columnNames;
+        })
+        .catch(error => {
+          this.errorMessage = 'Failed to load column names.';
+        });
     },
     resetBackendData() {
       fetch('/api/reset-backend-data', {
@@ -176,7 +192,6 @@ export default defineComponent({
           selectedGeneSet: this.selectedGeneSet,
         }),
       });
-      // Hide other components
     },
   },
   watch: {
@@ -209,16 +224,11 @@ export default defineComponent({
     },
   },
   mounted() {
-    // Fetch column names and example data from the backend
-    fetch('/api/get-column-names')
-      .then(response => response.json())
-      .then(data => {
-        console.log("Column names:", data.columnNames);
-        this.columnNames = data.columnNames;
-        this.exampleData = data.exampleData;
-      });
+    console.log('mounted() called');
+    this.fetchColumnNames();  // Call the fetch method on mount
   },
 });
+
 </script>
 
 <style scoped>

@@ -25,12 +25,6 @@ clean:
 start:
 	$(FRONTEND_DIR)/node_modules/.bin/concurrently --kill-others-on-fail "make runserver" "make rundev"
 
-
-
-# above is most imprortant for creating development environment but below are other commands that I found helpful to automate throughout development
-
-
-
 # start backend server
 runserver:
 	cd $(BACKEND_DIR) && $(DJANGO_MANAGE) runserver

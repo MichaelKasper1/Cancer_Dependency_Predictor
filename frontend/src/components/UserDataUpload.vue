@@ -25,11 +25,13 @@
       <div class="column">
         <h3>Upload Data</h3>
         <div class="input-group">
+          <a href="#" @click.prevent="openModal">Data format requirements</a>
+        </div>
+        <div class="input-group">
           <label for="file-upload" class="custom-file-upload">
-            Upload Data (TXT, CSV)
+            Upload Data
           </label>
-          <input id="file-upload" type="file" accept=".txt, .csv">
-          <!-- @change="handleFileUpload"> -->
+          <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload">
           <p v-if="uploadedFileName"><br>{{ uploadedFileName }}</p>
           <p v-if="fileError" class="error-message">{{ fileError }}</p>
         </div>
@@ -91,11 +93,24 @@
     <div class="input-group">
       <button @click="submit">Submit</button>
     </div>
+
+    <!-- Modal -->
+    <div v-if="showModal" class="modal" @click.self="closeModal">
+      <div class="modal-content">
+        <span class="close" @click="closeModal">&times;</span>
+        <h2>Data Requirements</h2>
+        <p>Your data should be in a .txt or .csv format with the following columns:</p>
+        <ul>
+          <li>Column 1: Gene symbols</li>
+          <li>Column 2: Numeric values for gene expression</li>
+          <!-- Add more requirements as needed -->
+        </ul>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-console.log('UserDataUpload.vue loaded');
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -107,57 +122,17 @@ export default defineComponent({
       expressionUnit: 'TPM',
       selectedGeneSet: 'default-gene-set',
       columnNames: [], // This will be populated from the backend
+      file: null as File | null,
       fileError: '',
       uploadedFileName: '',
       errorMessage: '',
+      showModal: false, // State to control the modal visibility
     };
   },
   methods: {
     submit() {
       // Handle form submission
     },
-    // handleFileUpload(event: Event) {
-    //   const file = (event.target as HTMLInputElement).files?.[0];
-    //   if (!file) return;
-
-    //   const reader = new FileReader();
-    //   reader.onload = (e) => {
-    //     const content = e.target?.result as string;
-    //     const lines = content.split('\n');
-
-    //     // Ensure file has more than 2 rows
-    //     if (lines.length < 2) {
-    //       this.fileError = 'File is too short. Must include more than one row.';
-    //       return;
-    //     }
-
-    //     // Ensure the data has at least 2 columns
-    //     const header = lines[0].split(/\t|,/);
-    //     if (header.length < 2) {
-    //       this.fileError = 'File must have at least 2 columns. One for a gene symbol, at least one for expression values.';
-    //       return;
-    //     }
-
-    //     // Ensure the first column has strings for the data
-    //     const firstRow = lines[1].split(/\t|,/);
-    //     if (!isNaN(Number(firstRow[0]))) {
-    //       console.warn('First column should contain gene symbols. Please ensure the gene symbols are in the first column.');
-    //     }
-
-    //     // Ensure the second column has numbers for the data
-    //     const secondRow = lines[1].split(/\t|,/);
-    //     if (isNaN(Number(secondRow[1]))) {
-    //       this.fileError = 'Second column must contain numeric values for gene expression.';
-    //       return;
-    //     }
-
-    //     this.fileError = ''; // Clear any previous errors
-    //     this.uploadedFileName = file.name;
-    //     // Process the file content
-    //   };
-
-    //   reader.readAsText(file);
-    // },
     useExample() {
       // Populate the upload data with example data
       this.uploadedFileName = 'example_data.txt';
@@ -193,6 +168,81 @@ export default defineComponent({
         }),
       });
     },
+    handleFileUpload(event: Event) {
+      const input = event.target as HTMLInputElement;
+      const file = input.files ? input.files[0] : null;
+      if (file) {
+        this.validateFile(file)
+          .then(isValid => {
+            if (isValid) {
+              this.file = file; // Store the file in the data property
+              this.uploadedFileName = file.name; // Update the uploaded file name
+              this.errorMessage = ''; // Clear any previous error messages
+              console.log('File uploaded:', file);
+            } else {
+              this.file = null;
+              this.uploadedFileName = '';
+            }
+          })
+          .catch(error => {
+            this.errorMessage = error.message;
+            this.file = null;
+            this.uploadedFileName = '';
+          });
+      }
+    },
+    validateFile(file: File): Promise<boolean> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          const lines = content.split('\n');
+
+          // Ensure file has more than 2 rows
+          if (lines.length < 2) {
+            reject(new Error('File is too short. Must include more than one row.'));
+            return;
+          }
+
+          // Ensure the data has at least 2 columns
+          const header = lines[0].split(/\t|,/);
+          if (header.length < 2) {
+            reject(new Error('File must have at least 2 columns. One for a gene symbol, at least one for expression values.'));
+            return;
+          }
+
+          // Ensure the first column has strings for the data and print warning if not
+          const firstRow = lines[1].split(/\t|,/);
+          if (!isNaN(Number(firstRow[0]))) {
+            reject(new Error('First column should contain gene symbols. If not, please ensure the gene symbols are in the first column.'));
+            return;
+          }
+
+          // Ensure that the second column has numbers for the data other than the first row or they can at least be coerced to numbers
+          const secondRow = lines[1].split(/\t|,/);
+          if (isNaN(Number(secondRow[1]))) {
+            reject(new Error('Second column must contain numeric values for gene expression.'));
+            return;
+          }
+
+          // Add other user input data checks here
+
+          resolve(true);
+        };
+
+        reader.onerror = () => {
+          reject(new Error('Error reading file.'));
+        };
+
+        reader.readAsText(file);
+      });
+    },
+    openModal() {
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+    },
   },
   watch: {
     selectedModel(newVal) {
@@ -224,11 +274,9 @@ export default defineComponent({
     },
   },
   mounted() {
-    console.log('mounted() called');
     this.fetchColumnNames();  // Call the fetch method on mount
   },
 });
-
 </script>
 
 <style scoped>
@@ -281,5 +329,47 @@ label {
 .error-message {
   color: red;
   margin-top: 10px;
+}
+
+/* Modal styles */
+.modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  max-width: 500px;
+  width: 90%;
+  text-align: left;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+/* Global link styles */
+a {
+  color: #369f6e; /* Change link color to blue */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 </style>

@@ -2,17 +2,26 @@
   <div id="app">
     <nav>
       <div class="nav-left">
-        <router-link to="/" class="app-title">Gene Dependency Web Server</router-link>
+        <router-link to="/" class="app-title">Cancer Dependency Predictor</router-link>
       </div>
       <div class="nav-right">
         <router-link to="/">Home</router-link>
-        <router-link to="/predict-gene-dependencies">Predict Gene Dependencies</router-link>
-        <router-link to="/tcga">TCGA Translational Dependency Tool</router-link>
+        <router-link to="/predict-gene-dependencies">Gene Dependency Predictor</router-link>
+        <router-link to="/tcga">TCGA Dependency Explorer</router-link>
+        <router-link to="/about">About</router-link>
       </div>
     </nav>
     <router-view/>
     <footer>
-      <p>Footer content here</p>
+      <div class="footer-content">
+        <img src="/cancercenterlogo.png" alt="Cancer Center Logo" class="footer-logo">
+        <p>
+          <a href="/" class="footer-link">Gene Dependency Web Server</a> - Kasper et al. Manuscript in review.
+          <br>
+          Version: Dec. 2024
+        </p>
+        <img src="/pitt_logo.png" alt="Pitt Logo" class="footer-logo">
+      </div>
     </footer>
   </div>
 </template>
@@ -24,6 +33,15 @@ export default {
 </script>
 
 <style>
+/* Ensure no unwanted white space */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
 nav {
   background-color: #42b983;
   padding: 10px;
@@ -65,13 +83,32 @@ nav a:hover {
   background-color: #369f6e;
 }
 
-footer {
-  background-color: white;
+.footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 10px;
+  background-color: #f8f8f8;
   text-align: center;
+  height: 60px; /* Set a fixed height for the footer */
   position: fixed;
-  width: 100%;
   bottom: 0;
+  width: 100%;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for better separation */
+}
+
+.footer-logo {
+  height: 40px; /* Set a fixed height for the logos */
+  margin: 0 20px; /* Increase margin to add more space between the logos and the text */
+}
+
+.footer-link {
+  color: #42b983;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
 }
 
 #app {

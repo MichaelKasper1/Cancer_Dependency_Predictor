@@ -1,4 +1,5 @@
-# Django Web Server for Gene Dependency Prediction
+# Django/Vue Web Application for Cancer Dependency Prediction
+
 
 This is a web implementation of DeepDEP algorithms. The goal of this project is to foster access to onocology researchers so they can predict the gene dependencies of a tumor or cancer cell line.
 

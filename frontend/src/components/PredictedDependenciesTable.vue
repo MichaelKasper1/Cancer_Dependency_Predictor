@@ -38,21 +38,32 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import EventBus from '../utils/eventBus';
+
+interface TableRow {
+  [key: string]: any;
+  id: number;
+  gene: string;
+}
+
+interface TableHeader {
+  text: string;
+  value: string;
+}
 
 export default {
   name: 'PredictedDependenciesTable',
   setup() {
-    const tableData = ref([]);
-    const headers = ref([]);
+    const tableData = ref<TableRow[]>([]);
+    const headers = ref<TableHeader[]>([]);
     const currentPage = ref(1);
     const rowsPerPage = ref(10);
     const searchQuery = ref('');
     const resultsReady = ref(false);
     const sortKey = ref('');
-    const sortOrder = ref('asc');
+    const sortOrder = ref<'asc' | 'desc'>('asc');
     const selectedColumn = ref('');
     const selectedGene = ref('');
 
@@ -78,7 +89,8 @@ export default {
       "Other syndrome"
     ];
 
-    const handleDataProcessed = (data) => {
+    const handleDataProcessed = (data: any) => {
+      console.log('Data processed event received in PredictedDependenciesTable component.');
       if (data?.result?.length) {
         tableData.value = data.result;
 
@@ -89,6 +101,7 @@ export default {
         }));
 
         resultsReady.value = true;
+        console.log('Results are ready and the table is rendered.');
       }
     };
 
@@ -126,7 +139,7 @@ export default {
       });
     });
 
-    const sortTable = (key) => {
+    const sortTable = (key: string) => {
       if (sortKey.value === key) {
         sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
       } else {
@@ -135,7 +148,7 @@ export default {
       }
     };
 
-    const selectColumnOrGene = (key, gene) => {
+    const selectColumnOrGene = (key: string, gene: string) => {
       if (!nonSelectableColumns.includes(key)) {
         if (key !== 'gene') {
           selectedColumn.value = key;

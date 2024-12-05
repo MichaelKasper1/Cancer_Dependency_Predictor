@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'predict',
     'tcga',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -122,6 +124,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+#### Added to default below
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Add your frontend URL here
+    "http://localhost:5173",  # Add your frontend URL here.
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",  # Add your frontend URL here.
+]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

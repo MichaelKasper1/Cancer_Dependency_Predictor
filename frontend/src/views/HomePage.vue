@@ -7,7 +7,7 @@
     <div class="columns">
       <div class="column">
         <h2>Gene dependency prediction and prioritization</h2>
-        <p>Predict gene dependencies of cancer samples using gene expression data and modern machine learning models. Explore enriched gene sets and other analysis. Currently models available are from <a href="https://pubmed.ncbi.nlm.nih.gov/34417181/" target="_blank">Chiu YC, et al. Sci Adv. 2021</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/39009815/" target="_blank">Shi X, et al. Nat Cancer. 2024</a>.</p>
+        <p>Predict gene dependencies of cancer samples using gene expression data and modern machine learning models. Select genes and/or samples to discover relevant, user-friendly, and interactive exploratory analysis. Models available are from <a href="https://pubmed.ncbi.nlm.nih.gov/34417181/" target="_blank">Chiu YC, et al. Sci Adv. 2021</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/39009815/" target="_blank">Shi X, et al. Nat Cancer. 2024</a>.</p>
         <router-link to="/predict-gene-dependencies">
           <button>Go to gene dependency predictor</button>
         </router-link>

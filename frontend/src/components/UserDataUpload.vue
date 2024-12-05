@@ -1,5 +1,5 @@
 <template>
-  <div class="user-data-input">
+  <div class="user-datas-input">
     <div class="columns">
       <!-- Column 1: Choose Model -->
       <div class="column">
@@ -113,6 +113,8 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import EventBus from '../utils/eventBus';
 
 export default defineComponent({
   data() {
@@ -128,9 +130,63 @@ export default defineComponent({
       uploadedFileName: '',
       errorMessage: '',
       showModal: false, // State to control the modal visibility
+      csrfToken: '', // Add this property
     };
   },
   methods: {
+    getCookie(name: string) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          // Does this cookie string begin with the name we want?
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    },
+    async fetchCsrfToken() {
+      this.csrfToken = this.getCookie('csrftoken');
+      if (!this.csrfToken) {
+        console.error('CSRF token not found');
+      }
+    },
+    async handleFileUpload(event: Event) {
+      const input = event.target as HTMLInputElement;
+      const file = input.files ? input.files[0] : null;
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('csrfmiddlewaretoken', this.csrfToken);
+
+          const response = await fetch('/api/process-data', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': this.csrfToken,
+            },
+            body: formData,
+            credentials: 'include',
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.status === 'success') {
+            console.log('Emitting dataProcessed event with data:', data);
+            EventBus.emit('dataProcessed', data);
+          } else {
+            console.error('Error:', data.error);
+          }
+        } catch (error) {
+          this.errorMessage = 'Failed to preprocess data.';
+          console.error('There was a problem with the fetch operation:', error);
+        }
+      }
+    },
     submit() {
       if (!this.file) {
         this.fileError = 'Please upload a file before submitting.';
@@ -145,10 +201,28 @@ export default defineComponent({
       formData.append('selectedGeneSet', this.selectedGeneSet);
       formData.append('file', this.file);
 
-      fetch('/api/preprocess', {
+      fetch('/api/process-data/', {
         method: 'POST',
         body: formData,
+        headers: {
+          'X-CSRFToken': csrftoken
+        }
       })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Response from backend:', data);
+        if (data.status === 'success') {
+          EventBus.emit('dataProcessed', data); // Emit the event using EventBus
+        } else {
+          console.error('Error:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error uploading file:', error);
+      });
+    },
+    useExample() {
+      fetch('/api/get-example-file')
         .then(response => {
           if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -156,17 +230,28 @@ export default defineComponent({
           return response.json();
         })
         .then(data => {
-          console.log('Preprocess successful:', data);
+          const geneSymbols = data.Gene || [];
+          const cclA = data.CCL_A || [];
+          const cclB = data.CCL_B || [];
+          const cclC = data.CCL_C || [];
+
+          if (geneSymbols.length === 0 || cclA.length === 0 || cclB.length === 0 || cclC.length === 0) {
+            throw new Error('Invalid data format');
+          }
+
+          const exampleContent = `Gene,CCL_A,CCL_B,CCL_C\n${geneSymbols.map((gene, index) => `${gene},${cclA[index]},${cclB[index]},${cclC[index]}`).join('\n')}`;
+          const blob = new Blob([exampleContent], { type: 'text/plain' });
+          const exampleFile = new File([blob], 'example_data.txt', { type: 'text/plain' });
+
+          // Set the file data property to the mock file object
+          this.file = exampleFile;
+          this.uploadedFileName = exampleFile.name;
+          this.fileError = '';
         })
         .catch(error => {
-          this.errorMessage = 'Failed to preprocess data.';
+          this.errorMessage = 'Failed to load example file.';
           console.error('There was a problem with the fetch operation:', error);
         });
-    },
-    useExample() {
-      // Populate the upload data with example data
-      this.uploadedFileName = 'example_data.txt';
-      this.fileError = '';
     },
     triggerFileUpload() {
       document.getElementById('file-upload').click();
@@ -186,34 +271,12 @@ export default defineComponent({
           this.errorMessage = 'Failed to load column names.';
         });
     },
-    fetchExampleFile() {
-      fetch('/api/get-example-file')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
-        })
-        .then(data => {
-          const exampleContent = `GeneSymbol,ExpressionValue\n${data.GeneSymbol.join('\n')}\n${data.ExpressionValue.join('\n')}`;
-          const blob = new Blob([exampleContent], { type: 'text/plain' });
-          const exampleFile = new File([blob], 'example_data.txt', { type: 'text/plain' });
-
-          // Set the file data property to the mock file object
-          this.file = exampleFile;
-          this.uploadedFileName = exampleFile.name;
-          this.fileError = '';
-        })
-        .catch(error => {
-          this.errorMessage = 'Failed to load example file.';
-          console.error('There was a problem with the fetch operation:', error);
-        });
-    },
     resetBackendData() {
       fetch('/api/reset-backend-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': this.csrfToken,
         },
         body: JSON.stringify({
           selectedModel: this.selectedModel,
@@ -222,30 +285,8 @@ export default defineComponent({
           expressionUnit: this.expressionUnit,
           selectedGeneSet: this.selectedGeneSet,
         }),
+        credentials: 'include',
       });
-    },
-    handleFileUpload(event: Event) {
-      const input = event.target as HTMLInputElement;
-      const file = input.files ? input.files[0] : null;
-      if (file) {
-        this.validateFile(file)
-          .then(isValid => {
-            if (isValid) {
-              this.file = file; // Store the file in the data property
-              this.uploadedFileName = file.name; // Update the uploaded file name
-              this.errorMessage = ''; // Clear any previous error messages
-              console.log('File uploaded:', file);
-            } else {
-              this.file = null;
-              this.uploadedFileName = '';
-            }
-          })
-          .catch(error => {
-            this.errorMessage = error.message;
-            this.file = null;
-            this.uploadedFileName = '';
-          });
-      }
     },
     validateFile(file: File): Promise<boolean> {
       return new Promise((resolve, reject) => {
@@ -336,8 +377,159 @@ export default defineComponent({
   },
   mounted() {
     this.fetchColumnNames();  // Call the fetch method on mount
-    this.fetchExampleFile();  // Fetch the example file on mount
+    this.fetchCsrfToken();    // Fetch the CSRF token on mount
   },
+  setup() {
+    const tableData = ref<TableRow[]>([]);
+    const headers = ref<TableHeader[]>([]);
+    const currentPage = ref(1);
+    const rowsPerPage = ref(10);
+    const searchQuery = ref('');
+    const resultsReady = ref(false);
+    const sortKey = ref('');
+    const sortOrder = ref<'asc' | 'desc'>('asc');
+    const selectedColumn = ref('');
+    const selectedGene = ref('');
+
+    const nonSelectableColumns = [
+      "gene",
+      "Prediction performance (Corr)",
+      "Prediction Percentile TCGA",
+      "Prediction DepMap percentile (CERES; n=278)",
+      "Predicted DepMap range (CERES; n=278)",
+      "Real DepMap percentile (CCLE; n=278)",
+      "Real DepMap range (CCLE; n=278)",
+      "Prediction range (TCGA; n=8238)",
+      "Real DepMap range (Chronos; n=996)",
+      "Ensembl gene ID",
+      "Entrez gene ID",
+      "Synonym",
+      "Cancer syndrome",
+      "Tissue type",
+      "Molecular genetics",
+      "Role in cancer",
+      "Mutation types",
+      "Translocation partner",
+      "Other syndrome"
+    ];
+
+    const handleDataProcessed = (data: any) => {
+      if (data?.result?.length) {
+        tableData.value = data.result;
+
+        // Generate headers directly from the data
+        headers.value = Object.keys(tableData.value[0]).map(key => ({
+          text: key,
+          value: key
+        }));
+
+        resultsReady.value = true;
+        console.log('Results are ready and the table is rendered.');
+      }
+    };
+
+    onMounted(() => {
+      EventBus.on('dataProcessed', handleDataProcessed);
+    });
+
+    onBeforeUnmount(() => {
+      EventBus.off('dataProcessed', handleDataProcessed);
+    });
+
+    const totalPages = computed(() => Math.ceil(filteredData.value.length / rowsPerPage.value));
+
+    const paginatedData = computed(() => {
+      const start = (currentPage.value - 1) * rowsPerPage.value;
+      const end = start + rowsPerPage.value;
+      return sortedData.value.slice(start, end);
+    });
+
+    const filteredData = computed(() => {
+      return tableData.value.filter(row => {
+        return Object.values(row).some(value =>
+          String(value).toLowerCase().includes(searchQuery.value.toLowerCase())
+        );
+      });
+    });
+
+    const sortedData = computed(() => {
+      return filteredData.value.slice().sort((a, b) => {
+        const aValue = a[sortKey.value];
+        const bValue = b[sortKey.value];
+        if (aValue === bValue) return 0;
+        const order = sortOrder.value === 'asc' ? 1 : -1;
+        return (aValue > bValue ? 1 : -1) * order;
+      });
+    });
+
+    const sortTable = (key: string) => {
+      if (sortKey.value === key) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortKey.value = key;
+        sortOrder.value = 'asc';
+      }
+    };
+
+    const selectColumnOrGene = (key: string, gene: string) => {
+      if (!nonSelectableColumns.includes(key)) {
+        if (key !== 'gene') {
+          selectedColumn.value = key;
+        }
+        selectedGene.value = gene;
+
+        EventBus.emit('newColumnOrGeneSelected', { column: selectedColumn.value, gene: selectedGene.value });
+      }
+    };
+
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+      }
+    };
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--;
+      }
+    };
+
+    const saveData = () => {
+      const csvContent = [
+        headers.value.map(header => header.text).join(','),
+        ...tableData.value.map(row => headers.value.map(header => row[header.value]).join(','))
+      ].join('\n');
+
+      const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+      const exportFileDefaultName = 'data.csv';
+
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    };
+
+    return {
+      tableData,
+      headers,
+      currentPage,
+      rowsPerPage,
+      totalPages,
+      paginatedData,
+      nextPage,
+      prevPage,
+      searchQuery,
+      filteredData,
+      saveData,
+      resultsReady,
+      sortKey,
+      sortOrder,
+      sortTable,
+      selectedColumn,
+      selectedGene,
+      selectColumnOrGene,
+    };
+  }
 });
 </script>
 
@@ -458,5 +650,83 @@ label {
   .column {
     margin-bottom: 20px; /* Add space between stacked columns */
   }
+}
+
+.table-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+input[type="text"] {
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 70%;
+}
+
+button, .custom-file-upload {
+  padding: 10px 20px;
+  background-color: #42b983;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover, .custom-file-upload:hover {
+  background-color: #369f6e;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.highlighted {
+  background-color: rgba(54, 159, 110, 0.3);
 }
 </style>

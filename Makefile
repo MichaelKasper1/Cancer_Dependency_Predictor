@@ -1,17 +1,18 @@
 # Variables
-PYTHON = python3
+PYTHON = python3.8
 PIP = pip3
 DJANGO_MANAGE = $(PYTHON) manage.py
 NPM = npm
 FRONTEND_DIR = frontend
 BACKEND_DIR = backend
+VENV_DIR = $(BACKEND_DIR)/.venv
 
-# Default target
+# install all dependencies
 install: install-backend install-frontend
 
 # install backend from backend/requirements.txt
 install-backend:
-	cd $(BACKEND_DIR) && $(PIP) install -r requirements.txt
+	cd $(BACKEND_DIR) && $(PYTHON) -m venv $(VENV_DIR) && source $(VENV_DIR)/bin/activate && $(PIP) install -r requirements.txt
 
 # install frontend from frontend/package.json
 install-frontend:

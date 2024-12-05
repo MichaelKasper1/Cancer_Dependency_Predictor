@@ -1,7 +1,7 @@
 # Django/Vue Web Application for Cancer Dependency Prediction
 
 
-This is a web implementation of DeepDEP algorithms. The goal of this project is to foster access to onocology researchers so they can predict the gene dependencies of a tumor or cancer cell line.
+
 
 ### Deployment
 
@@ -33,12 +33,10 @@ Below are some helpful extensions I recommend for development:
 - [Remote Explorer](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) Let's you connect to Pitt CRC
 - [Vue](https://marketplace.visualstudio.com/items?itemName=Vue.volar) This extension provides support for view framework
 
-Once you have at least a basic understanding of these, time to start developing/ maintaining! I recommend creating an environment within the main "Gene_Dependency_Web_Server" directory named .venv. We need to use an old version of python to use the tensorflow/ keras trained DeepDEP models. You can do so like this:
+To set up your development environment, we need to use an old version of python to use the tensorflow/ keras trained DeepDEP models.
 
     ```bash
     brew install python@3.8
-    python3.8 -m venv .venv
-    source .venv/bin/activate
     ```
 
 Install make to easily install all app dependencies and start your development servers:
@@ -47,16 +45,21 @@ Install make to easily install all app dependencies and start your development s
     brew install make
     ```
 
-Use a make command to run various commands necessary to build and to run the app:
+Download and install all necessary dependencies for the app:
 
     ```bash
     make install
     ```
 
-Use a make command to concurrently 
+Run development servers:
 
     ```bash
     make start
     ```
 
-When you save changes to files, the app will reload automatically. Follow link in terminal to access website.
+Follow link in terminal to access website. 
+As you save changes to files, the app will reload automatically.
+
+## License
+
+This project is free to access for personal use. It is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

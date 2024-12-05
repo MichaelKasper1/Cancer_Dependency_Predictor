@@ -1,6 +1,6 @@
 <template>
-  <div class="predict">
-    <h1>Predict Gene Dependencies</h1>
+  <div>
+    <h2>Predict Gene Dependencies</h2>
     <UserDataUpload/>
     <!-- <PredictedDependenciesTable/>
     <WaterfallPlot/>
@@ -32,14 +32,5 @@ export default {
 </script>
 
 <style scoped>
-.predict {
-  text-align: center;
-  margin-top: 120px; /* Adjust to ensure content is not hidden behind the fixed nav bar */
-}
 
-@media(max-width: 695px) {
-  .predict {
-    margin-top: 160px; /* Adjust margin for smaller screens */
-  }
-}
 </style>

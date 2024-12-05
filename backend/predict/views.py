@@ -68,16 +68,58 @@ print()
 
 @require_http_methods(["GET"])
 def get_column_names(request):
-    print('get_column_names function called')
     global C2_cp, hallmark
     column_names = list(C2_cp.columns) + list(hallmark.columns)  # Combine column names
-    logger.info(f'Column names: {column_names}')
     return JsonResponse({'columnNames': column_names})
+
+@require_http_methods(["GET"])
+def get_example_file(request):
+    global example_exp_file
+    print(example_exp_file.head())
+    return JsonResponse(example_exp_file.to_dict(orient='list'), safe=False)
 
 @require_http_methods(["POST"])
 def reset_backend_data(request):
     if request.method == 'POST':
-        print('reset_backend_data function called')
+
+        # ensure that the variables are empty
+
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
+
+@require_http_methods(["POST"])
+def process_data(request):
+    if request.method == 'POST':
+
+        data = request.POST
+        file = request.FILES.get('file')
+
+        selected_model = data.get('selectedModel')
+        log_transformed = data.get('logTransformed')
+        data_source = data.get('dataSource')
+        expression_unit = data.get('expressionUnit')
+        selected_gene_set = data.get('selectedGeneSet')
+
+        # example file
+        global example_exp_file
+
+        # For preprocessing
+        global C2_cp
+        global hallmark
+        global ccle_exp_for_missing_value_6016
+        global crispr_gene_fingerprint_cgp
+        global fingerprint
+        global ccle_exp_with_gene_alias_DeepDep
+
+        # for table 1 annotations
+        global ccl_predicted_data_model_10xCV_paper
+        global GeneEffect_18Q2_278CCLs
+        global tcga_pred
+        global gene_annotations
+
+        # save data source and log_transformed to session
+        request.session['data_source'] = data_source
+        request.session['log_transformed'] = log_transformed
 
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)

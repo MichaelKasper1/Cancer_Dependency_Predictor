@@ -25,18 +25,19 @@
       <div class="column">
         <h3>Upload Data</h3>
         <div class="input-group">
-          <a href="#" @click.prevent="openModal">Data format requirements</a>
+          <a href="#" class="button-link" @click.prevent="openModal">Data format requirements</a>
         </div>
         <div class="input-group">
-          <label for="file-upload" class="custom-file-upload">
-            Upload Data
-          </label>
-          <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload">
-          <p v-if="uploadedFileName"><br>{{ uploadedFileName }}</p>
+          <button class="button" @click="triggerFileUpload">Upload Data</button>
+          <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload" style="display: none;">
+          <p v-if="uploadedFileName">
+            <br>{{ uploadedFileName }}
+            <button class="delete-button" @click="deleteFile">x</button>
+          </p>
           <p v-if="fileError" class="error-message">{{ fileError }}</p>
         </div>
         <div class="input-group">
-          <button @click="useExample">Use Example Data</button>
+          <button class="button" @click="useExample">Use Example Data</button>
         </div>
       </div>
 
@@ -131,12 +132,44 @@ export default defineComponent({
   },
   methods: {
     submit() {
-      // Handle form submission
+      if (!this.file) {
+        this.fileError = 'Please upload a file before submitting.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('selectedModel', this.selectedModel);
+      formData.append('logTransformed', this.logTransformed);
+      formData.append('dataSource', this.dataSource);
+      formData.append('expressionUnit', this.expressionUnit);
+      formData.append('selectedGeneSet', this.selectedGeneSet);
+      formData.append('file', this.file);
+
+      fetch('/api/preprocess', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Preprocess successful:', data);
+        })
+        .catch(error => {
+          this.errorMessage = 'Failed to preprocess data.';
+          console.error('There was a problem with the fetch operation:', error);
+        });
     },
     useExample() {
       // Populate the upload data with example data
       this.uploadedFileName = 'example_data.txt';
       this.fileError = '';
+    },
+    triggerFileUpload() {
+      document.getElementById('file-upload').click();
     },
     fetchColumnNames() {
       fetch('/api/get-column-names')
@@ -151,6 +184,29 @@ export default defineComponent({
         })
         .catch(error => {
           this.errorMessage = 'Failed to load column names.';
+        });
+    },
+    fetchExampleFile() {
+      fetch('/api/get-example-file')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          const exampleContent = `GeneSymbol,ExpressionValue\n${data.GeneSymbol.join('\n')}\n${data.ExpressionValue.join('\n')}`;
+          const blob = new Blob([exampleContent], { type: 'text/plain' });
+          const exampleFile = new File([blob], 'example_data.txt', { type: 'text/plain' });
+
+          // Set the file data property to the mock file object
+          this.file = exampleFile;
+          this.uploadedFileName = exampleFile.name;
+          this.fileError = '';
+        })
+        .catch(error => {
+          this.errorMessage = 'Failed to load example file.';
+          console.error('There was a problem with the fetch operation:', error);
         });
     },
     resetBackendData() {
@@ -243,6 +299,11 @@ export default defineComponent({
     closeModal() {
       this.showModal = false;
     },
+    deleteFile() {
+      this.file = null;
+      this.uploadedFileName = '';
+      this.resetBackendData();
+    }
   },
   watch: {
     selectedModel(newVal) {
@@ -275,6 +336,7 @@ export default defineComponent({
   },
   mounted() {
     this.fetchColumnNames();  // Call the fetch method on mount
+    this.fetchExampleFile();  // Fetch the example file on mount
   },
 });
 </script>
@@ -289,6 +351,7 @@ export default defineComponent({
   display: flex;
   justify-content: space-around;
   margin-bottom: 20px;
+  flex-wrap: wrap; /* Allow columns to wrap */
 }
 
 .column {
@@ -331,6 +394,20 @@ label {
   margin-top: 10px;
 }
 
+.delete-button {
+  background: none;
+  border: none;
+  color: red;
+  cursor: pointer;
+  font-size: 1em;
+  margin-left: 3px; /* Reduced margin */
+  padding: 2px; /* Added padding to make the box smaller */
+}
+
+.delete-button:hover {
+  color: darkred;
+}
+
 /* Modal styles */
 .modal {
   display: flex;
@@ -363,13 +440,23 @@ label {
   cursor: pointer;
 }
 
-/* Global link styles */
-a {
-  color: #369f6e; /* Change link color to blue */
+.button-link {
+  color: #551A8B; /* Replace with the color of the buttons */
   text-decoration: none;
 }
 
-a:hover {
+.button-link:hover {
   text-decoration: underline;
+}
+
+/* Media query for screens narrower than 745px */
+@media (max-width: 745px) {
+  .columns {
+    flex-direction: column; /* Stack columns vertically */
+  }
+
+  .column {
+    margin-bottom: 20px; /* Add space between stacked columns */
+  }
 }
 </style>

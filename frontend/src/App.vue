@@ -11,12 +11,14 @@
         <router-link to="/about">About</router-link>
       </div>
     </nav>
-    <router-view/>
-    <footer>
+    <div class="content">
+      <router-view/>
+    </div>
+    <footer class="footer">
       <div class="footer-content">
         <img src="/cancercenterlogo.png" alt="Cancer Center Logo" class="footer-logo">
         <p>
-          <a href="/" class="footer-link">Gene Dependency Web Server</a> - Kasper et al. Manuscript in review.
+          <a href="/" target="_blank">Gene Dependency Predictor</a> - Kasper et al. Manuscript in review.
           <br>
           Version: Dec. 2024
         </p>
@@ -42,6 +44,17 @@ html, body {
   box-sizing: border-box;
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+}
+
 nav {
   background-color: #42b983;
   padding: 10px;
@@ -53,6 +66,7 @@ nav {
   width: 100%;
   z-index: 1000; /* Ensure the nav bar is above other content */
   box-sizing: border-box; /* Include padding in the element's total width and height */
+  height: 60px; /* Set a fixed height for the nav bar */
 }
 
 .nav-left {
@@ -77,10 +91,20 @@ nav a {
   color: white;
   text-decoration: none;
   padding: 10px;
+  flex-shrink: 1; /* Allow the tab buttons to shrink */
 }
 
 nav a:hover {
   background-color: #369f6e;
+}
+
+.content {
+  flex: 1;
+  margin-top: 75px; /* Add margin to avoid content being hidden behind the fixed nav bar */
+}
+
+.footer {
+  display: block;
 }
 
 .footer-content {
@@ -91,9 +115,6 @@ nav a:hover {
   background-color: #f8f8f8;
   text-align: center;
   height: 60px; /* Set a fixed height for the footer */
-  position: fixed;
-  bottom: 0;
-  width: 100%;
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for better separation */
 }
 
@@ -102,21 +123,17 @@ nav a:hover {
   margin: 0 20px; /* Increase margin to add more space between the logos and the text */
 }
 
-.footer-link {
-  color: #42b983;
-  text-decoration: none;
+/* Media query to hide the footer on small screens */
+@media (max-width: 730px) {
+  .footer {
+    display: none;
+  }
 }
 
-.footer-link:hover {
-  text-decoration: underline;
-}
-
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px; /* Add margin to avoid content being hidden behind the fixed nav bar */
+/* Media query to hide the app-title on small screens */
+@media (max-width: 750px) {
+  .app-title {
+    display: none;
+  }
 }
 </style>

@@ -1,6 +1,6 @@
 import pandas as pd
 import gseapy as gp
-# from gseapy import Msigdb
+from django.core.cache import cache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,9 +10,9 @@ def perform_gsea_django(request, column, gene_column='gene'):
         if not isinstance(column, pd.DataFrame):
             raise ValueError("Input is not a DataFrame")
         
-        # Save the column and gene in session
-        request.session['column_gsea'] = column.to_json()
-        request.session['gene_column'] = gene_column
+        # Save the column and gene in cache
+        cache.set('column_gsea', column.to_json(), timeout=None)
+        cache.set('gene_column', gene_column, timeout=None)
         
         # Ensure the gene column is set as the index
         if gene_column not in column.columns:

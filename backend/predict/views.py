@@ -13,6 +13,7 @@ import json
 # load custom functions for application
 from .preprocess import preprocess
 from .predict_samples import predict_samples
+from .process_elastic_net import process_elastic_net
 from .annotate_table import annotate_table
 from .waterfallPlot import create_waterfall_plot
 from .gsea import perform_gsea_django
@@ -54,6 +55,9 @@ C2_cp = load_mongo_data('C2_cp')
 hallmark = load_mongo_data('hallmark')
 ccle_exp_with_gene_alias_DeepDep = load_mongo_data('ccle_exp_with_gene_alias_DeepDep')
 
+# elastic net model data
+medians_CCLE21Q1 = load_mongo_data('medians_CCLE21Q1')
+
 # data first used in table 1. The annotation file is above in the preprocessing section. The predicted dependency data are also used throughout the app.
 ccl_predicted_data_model_10xCV_paper = load_mongo_data('ccl_predicted_data_model_10xCV_paper')
 GeneEffect_18Q2_278CCLs = load_mongo_data('GeneEffect_18Q2_278CCLs')
@@ -68,13 +72,6 @@ cell_info = load_mongo_data('cell_info_21Q3_PrimaryTypeFixed')
 
 # used for caching user chosen information
 global_data = {}
-
-print('Logs will appear here.')
-print()
-print()
-print('Data loaded from MongoDB.')
-print()
-print()
 
 @require_http_methods(["GET"])
 def get_column_names(request):
@@ -110,13 +107,16 @@ def process_data(request):
         # example file
         global example_exp_file
 
-        # For preprocessing
+        # For preprocessing DeepDEP
         global C2_cp
         global hallmark
         global ccle_exp_for_missing_value_6016
         global crispr_gene_fingerprint_cgp
         global fingerprint
         global ccle_exp_with_gene_alias_DeepDep
+
+        # For preprocessing elastic net
+        global medians_CCLE21Q1
 
         # for table 1 annotations
         global ccl_predicted_data_model_10xCV_paper
@@ -128,19 +128,11 @@ def process_data(request):
         cache.set('data_source', data_source, timeout=1800)  # 30 minutes
         cache.set('log_transformed', log_transformed, timeout=1800)  # 30 minutes
 
-        # some minor data processing
-        if not file:
-            logger.error("No file uploaded")
-            return JsonResponse({'error': 'No file uploaded'}, status=400)
-
         if log_transformed is None or data_source is None or selected_gene_set is None:
             logger.error("Missing required parameters")
             return JsonResponse({'error': 'Missing required parameters'}, status=400)
 
         try:
-            # Convert log_transformed to boolean
-            log_transformed = log_transformed.lower() in ['true', '1', 'yes']
-
             # Determine the delimiter for reading user uploaded file
             delimiter = ','  # Default to comma
             first_line = file.readline().decode('utf-8')
@@ -153,31 +145,47 @@ def process_data(request):
         except Exception as e:
             logger.error("Error reading file: %s", str(e))
             return JsonResponse({'error': str(e)}, status=500)
+        
+        # ensure the first column is named 'Gene'
+        df = df.rename(columns={df.columns[0]: "Gene"})
 
-        try:
-            # Call the preprocess function
-            df, fingerprint_df = preprocess(df, log_transformed, selected_gene_set, expression_unit, ccle_exp_for_missing_value_6016, crispr_gene_fingerprint_cgp, hallmark, C2_cp, fingerprint, ccle_exp_with_gene_alias_DeepDep)
+        if selected_model == 'DeepDEP':
+            try:
+                # Call the preprocess function
+                df, fingerprint_df = preprocess(df, log_transformed, selected_gene_set, expression_unit, ccle_exp_for_missing_value_6016, crispr_gene_fingerprint_cgp, hallmark, C2_cp, fingerprint, ccle_exp_with_gene_alias_DeepDep)
 
-            # Call the predict_samples function
-            result_df = predict_samples(df, fingerprint_df)
+                # Call the predict_samples function
+                result_df = predict_samples(df, fingerprint_df)
 
-            # Call the table annotations function. First ensure data is accessible.
-            result_df = annotate_table(result_df, gene_annotations, data_source, ccl_predicted_data_model_10xCV_paper, GeneEffect_18Q2_278CCLs, tcga_pred)
+                # Call the table annotations function. First ensure data is accessible.
+                result_df = annotate_table(result_df, gene_annotations, data_source, ccl_predicted_data_model_10xCV_paper, GeneEffect_18Q2_278CCLs, tcga_pred)
 
-            # Convert the result DataFrame to a JSON-serializable format
-            result_json = result_df.to_dict(orient='records')
+                # Convert the result DataFrame to a JSON-serializable format
+                result_json = result_df.to_dict(orient='records')
 
-            # Store the result in the cache
-            cache.set('result_json', json.dumps(result_json), timeout=1800)  # 30 minutes
-            # also store result under slightly different variable name
-            cache.set('results_json', json.dumps(result_json), timeout=1800)  # 30 minutes
+                # Store the result in the cache
+                cache.set('result_json', json.dumps(result_json), timeout=1800)  # 30 minutes
+                # also store result under slightly different variable name
+                cache.set('results_json', json.dumps(result_json), timeout=1800)  # 30 minutes
 
-            # Return the result as JSON
-            return JsonResponse({'status': 'success', 'result': result_json})
-        except Exception as e:
-            logger.error("Error processing data: %s", str(e))
-            return JsonResponse({'error': str(e)}, status=500)
+                # Return the result as JSON
+                return JsonResponse({'status': 'success', 'result': result_json})
+            except Exception as e:
+                logger.error("Error processing data for DeepDEP: %s", str(e))
+                return JsonResponse({'error': str(e)}, status=500)
+        else:
+            try:
+                # call the function for elastic net model prediction
+                result_df = process_elastic_net(df, log_transformed, selected_gene_set, expression_unit, medians_CCLE21Q1)
 
+                # call annotate_table function for elastic net models
+
+
+                return JsonResponse({'status': 'success', 'result': result_df.to_dict(orient='records')})
+            except Exception as e:
+                logger.error("Error processing data for elastic net: %s", str(e))
+                return JsonResponse({'error': str(e)}, status=500)
+            
 @require_http_methods(["POST"])
 def selected_data(request):
     if request.method == 'POST':
@@ -187,8 +195,8 @@ def selected_data(request):
             gene = data.get('gene')
 
             # save column and gene to cache
-            cache.set('Column', column, timeout=1800)  # 30 minutes
-            cache.set('Gene', gene, timeout=1800)  # 30 minutes
+            cache.set('Column', column, None)  # 30 minutes
+            cache.set('Gene', gene, None)  # 30 minutes
 
             # Retrieve the result from the cache
             results_json = cache.get('results_json')
@@ -218,7 +226,7 @@ def selected_data(request):
             logger.error("Error in selected_data: %s", str(e))
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-# returns gsea table
+@require_http_methods(["POST"])
 def gsea_data(request):
     if request.method == 'POST':
         try:
@@ -228,11 +236,11 @@ def gsea_data(request):
 
             logger.info("Received POST data: column=%s, gene=%s", column, gene)
 
-            # Retrieve the result from the session
-            results_json = request.session.get('results_json')
+            # Retrieve the result from the cache
+            results_json = cache.get('results_json')
             if results_json is None:
-                logger.error("No data found in session")
-                return JsonResponse({'status': 'error', 'message': 'No data found in session'}, status=400)
+                logger.error("No data found in cache")
+                return JsonResponse({'status': 'error', 'message': 'No data found in cache'}, status=400)
 
             # Convert JSON string back to DataFrame
             result_df = pd.DataFrame(json.loads(results_json))
@@ -245,6 +253,7 @@ def gsea_data(request):
             # Get table data using perform_gsea_django for GSEA, pass the gene and column
             gsea_table_data = perform_gsea_django(request, result_df[['gene', column]])
 
+            # Return the GSEA table data as JSON
             return JsonResponse({'status': 'success', 'gsea_table': gsea_table_data})
         except json.JSONDecodeError:
             logger.error("Invalid JSON in request body")
@@ -254,6 +263,7 @@ def gsea_data(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
         
 # returns plotly for gsea plot
+@require_http_methods(["POST"])
 def create_gsea_plot(request):
     if request.method == 'POST':
         try:
@@ -265,8 +275,8 @@ def create_gsea_plot(request):
                 return JsonResponse({'status': 'error', 'message': 'Pathway name not provided in request body'}, status=400)
 
             # Retrieve the JSON string for 'column' and convert it back to a pandas DataFrame or Series
-            column_json = request.session.get('column_gsea', None)
-            gene_column = request.session.get('gene_column', None)
+            column_json = cache.get('column_gsea', None)
+            gene_column = cache.get('gene_column', None)
 
             # Call the separated logic function
             plot_json = create_gsea_plot_logic(pathway_name, column_json, gene_column)
@@ -285,11 +295,17 @@ def create_gsea_plot(request):
 # code for density plot
 def create_density_plot(request):
     try:
-        gene = request.session.get('Gene')
-        column = request.session.get('Column')
-        results_json = request.session.get('results_json')
-        data_source = request.session.get('data_source')
+        column = cache.get('Column')
+        gene = cache.get('Gene')
+        results_json = cache.get('results_json')
+        data_source = cache.get('data_source')
         result_df = pd.DataFrame(json.loads(results_json))
+
+        # print all these
+        print(gene)
+        print(column)
+        print(data_source)
+        print(result_df)
 
         global ccl_predicted_data_model_10xCV_paper
         global GeneEffect_18Q2_278CCLs
@@ -312,10 +328,10 @@ def create_density_plot(request):
 # code for bar plot
 def create_bar_plot(request):
     try:
-        gene = request.session.get('Gene')
-        column = request.session.get('Column')
-        results_json = request.session.get('results_json')
-        data_source = request.session.get('data_source')
+        column = cache.get('Column')
+        gene = cache.get('Gene')
+        results_json = cache.get('results_json')
+        data_source = cache.get('data_source')
         result_df = pd.DataFrame(json.loads(results_json))
 
         global ccl_predicted_data_model_10xCV_paper
@@ -336,10 +352,10 @@ def create_bar_plot(request):
 # code for cancer subtype plot
 def create_bar_sub_plot(request):
     try:
-        gene = request.session.get('Gene')
-        column = request.session.get('Column')
-        results_json = request.session.get('results_json')
-        data_source = request.session.get('data_source')
+        column = cache.get('Column')
+        gene = cache.get('Gene')
+        results_json = cache.get('results_json')
+        data_source = cache.get('data_source')
         
         # Decode the request body
         request_body = request.body.decode('utf-8')
@@ -377,11 +393,9 @@ def create_bar_sub_plot(request):
 # code for network
 def create_network_plot(request):
     try:
-        gene = request.session.get('Gene')
-        column = request.session.get('Column')
-        results_json = request.session.get('results_json')
-        result_df = pd.DataFrame(json.loads(results_json))
-        data_source = request.session.get('data_source')
+        column = cache.get('Column')
+        gene = cache.get('Gene')
+        data_source = cache.get('data_source')
 
         global ccle_23q4_chronos_996
         global tcga_pred
@@ -400,8 +414,8 @@ def create_network_plot(request):
 # Function to download network data as CSV
 def download_network(request):
     try:
-        gene = request.session.get('Gene')
-        data_source = request.session.get('data_source')
+        gene = cache.get('Gene')
+        data_source = cache.get('data_source')
 
         global ccle_23q4_chronos_996
         global tcga_pred

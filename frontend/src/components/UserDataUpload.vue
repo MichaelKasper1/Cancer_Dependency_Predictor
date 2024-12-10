@@ -7,38 +7,38 @@
         <div class="input-group">
           <label>
             <input type="radio" value="DeepDEP" v-model="selectedModel">
-            <a href="https://pubmed.ncbi.nlm.nih.gov/34417181/" target="_blank"> DeepDEP</a>
+            <a href="https://pubmed.ncbi.nlm.nih.gov/34417181/" target="_blank">DeepDEP</a>
           </label>
           <p>Chiu YC, et al. Sci Adv. 2021</p>
           
           <div class="spacer"></div>
           
           <label>
-            <input type="radio" value="Elastic Net Models" v-model="selectedModel">
-            <a href="https://pubmed.ncbi.nlm.nih.gov/39009815/" target="_blank"> Elastic Net Models</a>
+            <input type="radio" value="ElasticNetModels" v-model="selectedModel">
+            <a href="https://pubmed.ncbi.nlm.nih.gov/39009815/" target="_blank">Elastic Net Models</a>
           </label>
           <p>Shi X, et al. Nat Cancer. 2024</p>
         </div>
       </div>
 
-      <!-- Column 2: Upload Data -->
+      <!-- Column 2: Upload Gene Data -->
       <div class="column">
-        <h3>Upload Data</h3>
+        <h3>Upload Gene Expression Data</h3>
         <div class="input-group">
           <a href="#" class="button-link" @click.prevent="openModal">Data format requirements</a>
         </div>
         <div class="input-group">
           <button class="button" @click="triggerFileUpload">Upload Data</button>
           <input id="file-upload" type="file" accept=".txt, .csv" @change="handleFileUpload" style="display: none;">
-          <p v-if="uploadedFileName">
-            <br>{{ uploadedFileName }}
-            <button class="delete-button" @click="deleteFile">x</button>
-          </p>
-          <p v-if="fileError" class="error-message">{{ fileError }}</p>
         </div>
         <div class="input-group">
           <button class="button" @click="useExample">Use Example Data</button>
         </div>
+        <p v-if="uploadedFileName">
+            {{ uploadedFileName }}
+            <button class="delete-button" @click="deleteFile">x</button>
+        </p>
+          <p v-if="fileError" class="error-message">{{ fileError }}</p>
       </div>
 
       <!-- Column 3: Describe Data -->
@@ -47,24 +47,24 @@
         <div class="input-group">
           <p>Is your data log transformed?</p>
           <label>
-            <input type="radio" value="log" v-model="logTransformed"> Yes
+            <input type="radio" value="not-log" v-model="logTransformed"> No
           </label>
           <label>
-            <input type="radio" value="not-log" v-model="logTransformed"> No
+            <input type="radio" value="log" v-model="logTransformed"> Yes
           </label>
         </div>
         <div class="input-group">
-          <p>Is your data from a cell line or a tumor?</p>
+          <p>Is your data from cell lines or a tumors?</p>
           <label>
-            <input type="radio" value="tumor" v-model="dataSource" :disabled="selectedModel === 'Elastic Net Models'"> Tumor
+            <input type="radio" value="tumor" v-model="dataSource" :disabled="selectedModel === 'ElasticNetModels'"> Tumor
           </label>
           <label>
             <input type="radio" value="cell-line" v-model="dataSource"> Cell Line
           </label>
-          <div v-if="selectedModel === 'Elastic Net Models'">Tumor predictions only available for DeepDEP.</div>
+          <div v-if="selectedModel === 'ElasticNetModels'">Tumor predictions only available for DeepDEP.</div>
         </div>
         <div class="input-group">
-          <p>Is your data stored as a normalized expression unit?</p>
+          <p>Is your data a normalized expression unit?</p>
           <label>
             <input type="radio" value="TPM" v-model="expressionUnit"> TPM
           </label>
@@ -78,16 +78,18 @@
       <div class="column">
         <h3>Select Gene Set</h3>
         <div class="input-group">
-          <label for="gene-set">Select a Gene Set:</label>
-          <select id="gene-set" v-model="selectedGeneSet" style="width: 200px;">
+          <label for="gene-set" class="gene-set-label">Select gene set of interest for results</label>
+          <select id="gene-set" v-model="selectedGeneSet" class="gene-set-select">
             <option value="" disabled selected>Select a Gene Set</option>
-            <option value="default-gene-set">Default 1298 Cancer associated genes</option>
-            <option v-for="geneSet in columnNames" :key="geneSet" :value="geneSet">
+            <option value="default-gene-set">1298 cancer associated genes from DeepDEP</option>
+            <option v-for="geneSet in filteredGeneSets" :key="geneSet" :value="geneSet">
               {{ geneSet }}
             </option>
           </select>
+          <input type="text" v-model="searchQuery" placeholder="Filter Gene Sets" class="gene-set-search" @input="filterGeneSets">
         </div>
       </div>
+
     </div>
 
     <!-- Submit button -->
@@ -114,78 +116,45 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+// @ts-ignore
 import EventBus from '../utils/eventBus';
 
 export default defineComponent({
   data() {
     return {
       selectedModel: 'DeepDEP',
-      logTransformed: 'log',
+      logTransformed: 'not-log',
       dataSource: 'tumor',
       expressionUnit: 'TPM',
       selectedGeneSet: 'default-gene-set',
-      columnNames: [], // This will be populated from the backend
+      columnNames: [] as string[],
+      searchQuery: '',
+      filteredGeneSets: [] as string[],
       file: null as File | null,
       fileError: '',
       uploadedFileName: '',
       errorMessage: '',
-      showModal: false, // State to control the modal visibility
-      csrfToken: '', // Add this property
+      showModal: false,
+      csrfToken: '',
     };
   },
   methods: {
-    getCookie(name: string) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          // Does this cookie string begin with the name we want?
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
-    },
     async fetchCsrfToken() {
-      this.csrfToken = this.getCookie('csrftoken');
-      if (!this.csrfToken) {
-        console.error('CSRF token not found');
-      }
+      fetch('/api/get-csrf-token', {
+        method: 'GET',
+        credentials: 'include',
+      })
+        .then(response => response.json())
+        .then(data => {
+          this.csrfToken = data.csrfToken;
+        })
+        .catch(error => {
+          console.error('Failed to fetch CSRF token:', error);
+        });
     },
-    async handleFileUpload(event: Event) {
-      const input = event.target as HTMLInputElement;
-      const file = input.files ? input.files[0] : null;
-      if (file) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('csrfmiddlewaretoken', this.csrfToken);
-
-          const response = await fetch('/api/process-data', {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': this.csrfToken,
-            },
-            body: formData,
-            credentials: 'include',
-          });
-
-          const data = await response.json();
-
-          if (response.ok && data.status === 'success') {
-            console.log('Emitting dataProcessed event with data:', data);
-            EventBus.emit('dataProcessed', data);
-          } else {
-            console.error('Error:', data.error);
-          }
-        } catch (error) {
-          this.errorMessage = 'Failed to preprocess data.';
-          console.error('There was a problem with the fetch operation:', error);
-        }
-      }
+    filterGeneSets() {
+      const query = this.searchQuery.toLowerCase(); // Ensure searchQuery is a string
+      this.filteredGeneSets = this.columnNames.filter(geneSet => geneSet.toLowerCase().includes(query));
     },
     submit() {
       if (!this.file) {
@@ -201,11 +170,11 @@ export default defineComponent({
       formData.append('selectedGeneSet', this.selectedGeneSet);
       formData.append('file', this.file);
 
-      fetch('/api/process-data/', {
+      fetch('/api/process-data', {
         method: 'POST',
         body: formData,
         headers: {
-          'X-CSRFToken': csrftoken
+          'X-CSRFToken': this.csrfToken // Corrected to this.csrfToken
         }
       })
       .then(response => response.json())
@@ -239,7 +208,7 @@ export default defineComponent({
             throw new Error('Invalid data format');
           }
 
-          const exampleContent = `Gene,CCL_A,CCL_B,CCL_C\n${geneSymbols.map((gene, index) => `${gene},${cclA[index]},${cclB[index]},${cclC[index]}`).join('\n')}`;
+          const exampleContent = `Gene,CCL_A,CCL_B,CCL_C\n${geneSymbols.map((gene: string, index: number) => `${gene},${cclA[index]},${cclB[index]},${cclC[index]}`).join('\n')}`;
           const blob = new Blob([exampleContent], { type: 'text/plain' });
           const exampleFile = new File([blob], 'example_data.txt', { type: 'text/plain' });
 
@@ -254,7 +223,10 @@ export default defineComponent({
         });
     },
     triggerFileUpload() {
-      document.getElementById('file-upload').click();
+      const fileUploadElement = document.getElementById('file-upload');
+      if (fileUploadElement) {
+        fileUploadElement.click();
+      }
     },
     fetchColumnNames() {
       fetch('/api/get-column-names')
@@ -266,6 +238,7 @@ export default defineComponent({
         })
         .then(data => {
           this.columnNames = data.columnNames;
+          this.filteredGeneSets = this.columnNames; // Ensure filteredGeneSets is populated
         })
         .catch(error => {
           this.errorMessage = 'Failed to load column names.';
@@ -287,6 +260,29 @@ export default defineComponent({
         }),
         credentials: 'include',
       });
+    },
+    handleFileUpload(event: Event) {
+      // @ts-ignore
+      const file = event.target.files[0]; 
+      if (file) {
+        this.validateFile(file)
+          .then(isValid => {
+            if (isValid) {
+              this.file = file; // Store the file in the data property
+              this.uploadedFileName = file.name; // Update the uploaded file name
+              this.fileError = ''; // Clear any previous error messages
+              console.log('File uploaded:', file);
+            } else {
+              this.file = null;
+              this.uploadedFileName = '';
+            }
+          })
+          .catch(error => {
+            this.fileError = error.message;
+            this.file = null;
+            this.uploadedFileName = '';
+          });
+      }
     },
     validateFile(file: File): Promise<boolean> {
       return new Promise((resolve, reject) => {
@@ -347,8 +343,11 @@ export default defineComponent({
     }
   },
   watch: {
+    searchQuery() {
+      this.filterGeneSets();
+    },
     selectedModel(newVal) {
-      if (newVal === 'Elastic Net Models') {
+      if (newVal === 'ElasticNetModels') {
         this.dataSource = 'cell-line';
         // Display message and disable Tumor option
       }
@@ -376,11 +375,19 @@ export default defineComponent({
     },
   },
   mounted() {
-    this.fetchColumnNames();  // Call the fetch method on mount
-    this.fetchCsrfToken();    // Fetch the CSRF token on mount
+    this.fetchColumnNames();
+    this.fetchCsrfToken();
+    this.filteredGeneSets = this.columnNames;
   },
   setup() {
+    interface TableRow {
+      [key: string]: any;
+    }
     const tableData = ref<TableRow[]>([]);
+    interface TableHeader {
+      text: string;
+      value: string;
+    }
     const headers = ref<TableHeader[]>([]);
     const currentPage = ref(1);
     const rowsPerPage = ref(10);
@@ -728,5 +735,24 @@ th {
 
 .highlighted {
   background-color: rgba(54, 159, 110, 0.3);
+}
+
+.gene-set-label {
+  display: block;
+  margin-bottom: 5px;
+  color: grey;
+}
+
+.gene-set-select {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.gene-set-search {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  box-sizing: border-box;
 }
 </style>

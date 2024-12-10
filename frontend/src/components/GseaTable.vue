@@ -39,49 +39,57 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+<script lang="ts">
+import { defineComponent, ref, onMounted, onBeforeUnmount, computed } from 'vue';
+// @ts-ignore
 import EventBus from '../utils/eventBus';
 
-export default {
+interface TableRow {
+  [key: string]: any;
+  id: number;
+}
+
+export default defineComponent({
   name: 'GseaDataTable',
   setup() {
-    const tableData = ref([]);
-    const headers = ref([]);
+    const tableData = ref<TableRow[]>([]);
+    const headers = ref<string[]>([]);
     const currentPage = ref(1);
     const rowsPerPage = ref(10);
     const searchQuery = ref('');
     const resultsReady = ref(false);
-    const selectedRow = ref(null);
+    const selectedRow = ref<TableRow | null>(null);
     const sortKey = ref('');
-    const sortOrder = ref('asc');
+    const sortOrder = ref<'asc' | 'desc'>('asc');
+    const csrfToken = ref('');
 
-    const getCsrfToken = () => {
-      const name = 'csrftoken';
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          return cookie.substring(name.length + 1);
-        }
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch('/api/get-csrf-token', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        csrfToken.value = data.csrfToken;
+      } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
       }
-      return '';
     };
 
-    const fetchGseaData = async (column, gene) => {
+    const fetchGseaData = async (column: string, gene: string) => {
       try {
         console.log('Fetching GSEA data with:', { column, gene });
-        const csrfToken = getCsrfToken();
         const response = await fetch('/api/gsea-data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
+            'X-CSRFToken': csrfToken.value,
           },
           body: JSON.stringify({ column, gene }),
         });
         const data = await response.json();
         if (data.status === 'success') {
+          console.log('GSEA data fetched successfully:', data.gsea_table);
           tableData.value = data.gsea_table;
           headers.value = Object.keys(tableData.value[0]);
           resultsReady.value = true;
@@ -93,12 +101,13 @@ export default {
       }
     };
 
-    const handleNewSelection = ({ column, gene }) => {
+    const handleNewSelection = ({ column, gene }: { column: string; gene: string }) => {
       console.log('New column or gene selected:', column, gene);
       fetchGseaData(column, gene);
     };
 
     onMounted(() => {
+      fetchCsrfToken();
       EventBus.on('newColumnOrGeneSelected', handleNewSelection);
     });
 
@@ -132,7 +141,7 @@ export default {
       });
     });
 
-    const sortTable = (key) => {
+    const sortTable = (key: string) => {
       if (sortKey.value === key) {
         sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
       } else {
@@ -168,7 +177,7 @@ export default {
       linkElement.click();
     };
 
-    const selectRow = (row) => {
+    const selectRow = (row: TableRow) => {
       selectedRow.value = row;
       console.log('Selected row:', row);
       EventBus.emit('rowSelected', { row });
@@ -194,7 +203,7 @@ export default {
       selectedRow,
     };
   }
-};
+});
 </script>
 
 <style scoped>

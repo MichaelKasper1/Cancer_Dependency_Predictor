@@ -8,13 +8,27 @@ BACKEND_DIR = backend
 VENV_DIR = $(BACKEND_DIR)/.venv
 
 # install all dependencies
-install: install-backend install-frontend
+install: install-python install-R install-R-packages install-backend install-frontend
 
-# install backend from backend/requirements.txt
+# install python and pip
+install-python:
+	brew install python@3.8
+	python3.8 -m ensurepip --upgrade
+
+# install R
+install-R:
+	brew install R
+
+# install R packages
+install-R-packages:
+    Rscript -e 'if (!requireNamespace("jsonlite", quietly = TRUE)) install.packages("jsonlite", repos="http://cran.us.r-project.org")'
+    Rscript -e 'if (!requireNamespace("glmnet", quietly = TRUE)) install.packages("glmnet", repos="http://cran.us.r-project.org")'
+
+# install python packages from backend/requirements.txt
 install-backend:
 	cd $(BACKEND_DIR) && $(PYTHON) -m venv $(VENV_DIR) && source $(VENV_DIR)/bin/activate && $(PIP) install -r requirements.txt
 
-# install frontend from frontend/package.json
+# install frontend dependencies from frontend/package.json
 install-frontend:
 	cd $(FRONTEND_DIR) && $(NPM) install && $(NPM) install plotly.js-dist mitt
 

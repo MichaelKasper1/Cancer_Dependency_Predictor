@@ -38,21 +38,29 @@ export default {
     const cancerTypes = ref(['Lung', 'Bladder', 'Kidney', 'Breast', 'Pancreatic', 'Myeloma', 'Brain', 'Sarcoma', 'Ovarian', 'Leukemia', 'Colon/Colorectal', 'Skin', 'Lymphoma', 'Bone', 'Gastric', 'Thyroid', 'Neuroblastoma', 'Rhabdoid', 'Others', 'Endometrial/Uterine', 'Head and Neck', 'Bile Duct', 'Esophageal', 'Liver', 'Cervical', 'Eye', 'Liposarcoma', 'Prostate']);
     const showCancerTypeSelect = ref(false);
     const message = ref('Plot of predicted dependency scores of the selected gene across different cancer subtypes by choice available for cell line data only.');
+    const csrfToken = ref('');
 
-    const getCsrfToken = () => {
-      const meta = document.querySelector('meta[name="csrf-token"]');
-      return meta ? meta.getAttribute('content') : '';
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch('/api/get-csrf-token', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        csrfToken.value = data.csrfToken;
+      } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+      }
     };
 
     const fetchPlotData = async (url, plotElement, cancerType = null) => {
       try {
-        const csrfToken = getCsrfToken();
         const body = cancerType ? JSON.stringify({ pancan_type: cancerType }) : null;
         const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
+            'X-CSRFToken': csrfToken.value,
           },
           body: body,
         });
@@ -110,7 +118,7 @@ export default {
         const response = await fetch('/api/download-network', {
           method: 'GET',
           headers: {
-            'X-CSRFToken': getCsrfToken(),
+            'X-CSRFToken': csrfToken.value,
           },
         });
 
@@ -133,6 +141,7 @@ export default {
     };
 
     onMounted(() => {
+      fetchCsrfToken();
       EventBus.on('plotCreated', handleRowSelected);
       EventBus.on('dataSourceChanged', (newDataSource) => {
         showCancerTypeSelect.value = newDataSource === 'cell-line';

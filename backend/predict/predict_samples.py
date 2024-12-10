@@ -29,7 +29,7 @@ def predict_samples(df, dep_data):
 
     data_fprint_1298DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data(dep_data)
     
-    model = models.load_model('./predict/model_final_exp.h5')
+    model = models.load_model('./predict/models/model_final_exp.h5')
 
     batch_size = 500
     num_samples = data_exp_tcga.shape[0]  # number of samples

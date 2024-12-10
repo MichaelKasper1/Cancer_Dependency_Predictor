@@ -88,18 +88,21 @@ def preprocess(df, is_log_transformed, gene_dependencies, expressionUnit, ccle_e
     gene_1_mar = output_data[output_data['Gene'] == '1-MAR']
     output_data = output_data[output_data['Gene'] != '1-MAR'].drop_duplicates(subset='Gene')
     df = pd.concat([output_data, gene_1_mar])
-    # Handle if the data is log transformed
-    # if not is_log_transformed:
-    #     # Apply log2 transformation + 1 to all columns except 'Gene'
-    #     df.set_index('Gene', inplace=True)  # Temporarily set 'Gene' as index to preserve it during operation
-    #     df = np.log2(df + 1)  # Apply log2(x+1) transformation
-    #     df.reset_index(inplace=True)  # Reset index to move 'Gene' back to a column
+
     # Convert FPKM/rpkm to TPM if needed
     if expressionUnit == "FPKM":
         df = df.set_index('Gene')
         total_rpkm = df.sum(axis=0)
         for column in df.columns:
             df[column] = df[column] * 10**6 / total_rpkm
+
+    # handle log transformation, the is_log_transformed will be either log or not-log
+    if is_log_transformed == "not-log":
+        df = df.set_index('Gene')
+        df = df.apply(pd.to_numeric, errors='coerce')
+        df = np.log2(df + 1)
+        df = df.reset_index()
+        
     # Create fingerprint_df based on gene set selection
     if gene_dependencies == "default-gene-set":
         crispr_gene_fingerprint_cgp = crispr_gene_fingerprint_cgp.drop(columns='index')

@@ -29,3 +29,7 @@ node_modules
 
 # ignore __pycache__ directory
 __pycache__
+
+# ignore .gitignore and .dockerignore
+!.gitignore
+!.dockerignore

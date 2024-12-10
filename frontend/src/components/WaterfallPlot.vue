@@ -19,17 +19,31 @@ export default {
     return {
       dataReady: false,
       plotData: null,
+      csrfToken: '',
     };
   },
   async mounted() {
     EventBus.on('plotDataReady', this.handlePlotData);
     EventBus.on('newColumnOrGeneSelected', this.handleNewColumnSelected);
+    await this.fetchCsrfToken();
   },
   beforeUnmount() {
     EventBus.off('plotDataReady', this.handlePlotData);
     EventBus.off('newColumnOrGeneSelected', this.handleNewColumnSelected);
   },
   methods: {
+    async fetchCsrfToken() {
+      try {
+        const response = await fetch('/api/get-csrf-token', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        this.csrfToken = data.csrfToken;
+      } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+      }
+    },
     handlePlotData(plotData) {
       this.plotData = plotData;
       this.dataReady = true;
@@ -41,25 +55,13 @@ export default {
       console.log('New column or gene selected:', column, gene);
       this.fetchData(column, gene);
     },
-    getCsrfToken() {
-      const name = 'csrftoken';
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          return cookie.substring(name.length + 1);
-        }
-      }
-      return '';
-    },
     async fetchData(column, gene) {
       try {
-        const csrfToken = this.getCsrfToken();
         const response = await fetch('/api/selected-data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
+            'X-CSRFToken': this.csrfToken,
           },
           body: JSON.stringify({ column, gene }),
         });

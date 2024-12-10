@@ -40,6 +40,7 @@
 
 <script lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+// @ts-ignore
 import EventBus from '../utils/eventBus';
 
 interface TableRow {
@@ -66,6 +67,20 @@ export default {
     const sortOrder = ref<'asc' | 'desc'>('asc');
     const selectedColumn = ref('');
     const selectedGene = ref('');
+    const csrfToken = ref('');
+
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch('/api/get-csrf-token', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        csrfToken.value = data.csrfToken;
+      } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+      }
+    };
 
     const nonSelectableColumns = [
       "gene",
@@ -106,6 +121,7 @@ export default {
     };
 
     onMounted(() => {
+      fetchCsrfToken();
       EventBus.on('dataProcessed', handleDataProcessed);
     });
 

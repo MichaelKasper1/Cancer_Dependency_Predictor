@@ -2,7 +2,7 @@
 
 ### Active Project
 
-Please note that this project is still in development. Some features are still in testing. Use the information under "develop" to download dependencies and run app locally if interested.
+Please note that this project is still in development. Some features are still in testing. Clone the repo and use the information under "develop" to download dependencies and run app locally if interested.
 
 
 ### Introduction

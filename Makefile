@@ -7,8 +7,8 @@ FRONTEND_DIR = frontend
 BACKEND_DIR = backend
 VENV_DIR = $(BACKEND_DIR)/.venv
 
-# install all dependencies
-install: install-python install-R install-R-packages install-backend install-frontend
+# install all dependencies and restore database
+install_macos: install-python install-R install-R-packages install-backend install-frontend
 
 # install python and pip
 install-python:
@@ -21,7 +21,6 @@ install-R:
 
 # install R packages
 install-R-packages:
-    Rscript -e 'if (!requireNamespace("jsonlite", quietly = TRUE)) install.packages("jsonlite", repos="http://cran.us.r-project.org")'
     Rscript -e 'if (!requireNamespace("glmnet", quietly = TRUE)) install.packages("glmnet", repos="http://cran.us.r-project.org")'
 
 # install python packages from backend/requirements.txt

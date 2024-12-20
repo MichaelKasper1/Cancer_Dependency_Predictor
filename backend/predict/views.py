@@ -15,6 +15,7 @@ from .preprocess import preprocess
 from .predict_samples import predict_samples
 from .process_elastic_net import process_elastic_net
 from .annotate_table import annotate_table
+from .annotate_EN_table import annotate_EN_table
 from .waterfallPlot import create_waterfall_plot
 from .gsea import perform_gsea_django
 from .gseaPlot import create_gsea_plot_logic
@@ -23,6 +24,7 @@ from .barPlot import create_bar_plot_logic
 from .barsubPlot import create_bar_sub_plot_logic
 from .networkPlot import create_network_plot_logic
 from .networkPlot import create_network_data
+from .predict_elastic_net import predict_elastic_net
 
 # Set up logging
 import logging
@@ -57,6 +59,10 @@ ccle_exp_with_gene_alias_DeepDep = load_mongo_data('ccle_exp_with_gene_alias_Dee
 
 # elastic net model data
 medians_CCLE21Q1 = load_mongo_data('medians_CCLE21Q1')
+EN_gene_alias = load_mongo_data('gene_aliases')
+model_performances_EN = load_mongo_data('model_performances_EN')
+ccle_21q1_expression = load_mongo_data('ccle_21q1_expression')
+GeneEffect_21q1 = load_mongo_data('GeneEffect_21q1')
 
 # data first used in table 1. The annotation file is above in the preprocessing section. The predicted dependency data are also used throughout the app.
 ccl_predicted_data_model_10xCV_paper = load_mongo_data('ccl_predicted_data_model_10xCV_paper')
@@ -115,8 +121,12 @@ def process_data(request):
         global fingerprint
         global ccle_exp_with_gene_alias_DeepDep
 
-        # For preprocessing elastic net
+        # For elastic net
         global medians_CCLE21Q1
+        global EN_gene_alias
+        global model_performances_EN
+        global GeneEffect_21q1
+        global ccle_21q1_expression
 
         # for table 1 annotations
         global ccl_predicted_data_model_10xCV_paper
@@ -175,13 +185,29 @@ def process_data(request):
                 return JsonResponse({'error': str(e)}, status=500)
         else:
             try:
+                result_df = None
                 # call the function for elastic net model prediction
-                result_df = process_elastic_net(df, log_transformed, selected_gene_set, expression_unit, medians_CCLE21Q1)
+                result_df = process_elastic_net(df, log_transformed, expression_unit, medians_CCLE21Q1, EN_gene_alias)
+
+                # with the result_df, call predict_elastic_net function
+                predictions_df = predict_elastic_net(result_df)
+
+                # transpose the predictions_df
+                predictions_df = predictions_df.T
 
                 # call annotate_table function for elastic net models
+                result_df = annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1)
+
+                # Convert the result DataFrame to a JSON-serializable format
+                result_json = result_df.to_dict(orient='records')
+
+                # Store the result in the cache
+                cache.set('result_json', json.dumps(result_json), timeout=1800)  # 30 minutes
+                # also store result under slightly different variable name
+                cache.set('results_json', json.dumps(result_json), timeout=1800)  # 30 minutes
 
 
-                return JsonResponse({'status': 'success', 'result': result_df.to_dict(orient='records')})
+                return JsonResponse({'status': 'success', 'result': result_json})
             except Exception as e:
                 logger.error("Error processing data for elastic net: %s", str(e))
                 return JsonResponse({'error': str(e)}, status=500)
@@ -300,12 +326,6 @@ def create_density_plot(request):
         results_json = cache.get('results_json')
         data_source = cache.get('data_source')
         result_df = pd.DataFrame(json.loads(results_json))
-
-        # print all these
-        print(gene)
-        print(column)
-        print(data_source)
-        print(result_df)
 
         global ccl_predicted_data_model_10xCV_paper
         global GeneEffect_18Q2_278CCLs

@@ -1,5 +1,10 @@
 # Django/Vue Web Application for Cancer Gene Dependency Prediction
 
+### Active Project
+
+Please note that this project is still in development. Some features are still in testing. Use the information under "develop" to download dependencies and run app locally if interested.
+
+
 ### Introduction
 
 This web application is open source. It is designed to predict, prioritize, analyze, and interpret cancer genetic dependencies through the two main tools:
@@ -21,6 +26,18 @@ This will start the app and make it accessible at http://localhost:8000.
 
 To set up your development environment,
 
+Restore the database. A .gz is available on Chiu lab OneDrive.
+mongodump --db mongodb --out /path/to/dump
+tar -czvf mongodb_dump.tar.gz -C /path/to/dump .
+
+    ```bash
+    brew tap mongodb/brew
+    brew install mongodb-database-tools
+
+    tar -xzvf mongodb_dump.tar.gz -C /path/to/restore
+    mongorestore --db mongodb /path/to/restore/mongodb
+    ```
+
 Install make for command line automation:
 
     ```bash
@@ -30,7 +47,7 @@ Install make for command line automation:
 Download and install all necessary dependencies for the app:
 
     ```bash
-    make install
+    make install_macos
     ```
 
 Run django and vue development servers concurrently:
@@ -50,9 +67,9 @@ I recommend using Visual Studio code as your IDE for development. You can downlo
 
 Below are links to useful tutorials:
 - [Django Tutorial from VSCode Documentation](https://code.visualstudio.com/docs/python/tutorial-django) Django is the python framework for the backend of the application. It performs the data processing and interacts with the database. This tutorial gives you Django basics and you can learn about the directory structure and important files.
-- [Typescript] (https://www.typescriptlang.org/docs/handbook/intro.html) Similar to javascript, but lets you manage data types and enables nice development features in your IDE.
+- [Typescript](https://www.typescriptlang.org/docs/handbook/intro.html) Similar to javascript, but lets you manage data types and enables nice development features in your IDE.
 - [Vue](https://vuejs.org/) Vue is the frontend framework for the web server. Vue files will be comprised of HTML, typescript, and css.
-- [MongoDB] (https://www.mongodb.com/docs/manual/tutorial/getting-started/). The database for the application. Please see the readme in the database directory for more information.
+- [MongoDB](https://www.mongodb.com/docs/manual/tutorial/getting-started/). The database for the application. Please see the readme in the database directory for more information.
 - [Using Docker and Python in VScode](https://learn.microsoft.com/en-us/visualstudio/docker/tutorials/docker-tutorial) This tutorial helps you understand how and why to use Docker for containerization.
 - [Make](https://makefiletutorial.com/) tutorial for understanding Make and how makefile helps to build app. There are also official tutorials on their website but I liked this one.
 

@@ -146,7 +146,6 @@ def annotate_table(result_df, gene_annotations, data_source, ccl_predicted_data_
 
     # Print the time taken for this function
     print(f"Time taken for annotate_table function: {time.time() - start:.2f} seconds")
-    end = time.time()
 
     # make the 
     return result_df

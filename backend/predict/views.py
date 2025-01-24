@@ -63,6 +63,7 @@ EN_gene_alias = load_mongo_data('gene_aliases')
 model_performances_EN = load_mongo_data('model_performances_EN')
 ccle_21q1_expression = load_mongo_data('ccle_21q1_expression')
 GeneEffect_21q1 = load_mongo_data('GeneEffect_21q1')
+ccle_predictions_EN = load_mongo_data('ccle_predictions_EN')
 
 # data first used in table 1. The annotation file is above in the preprocessing section. The predicted dependency data are also used throughout the app.
 ccl_predicted_data_model_10xCV_paper = load_mongo_data('ccl_predicted_data_model_10xCV_paper')
@@ -127,6 +128,7 @@ def process_data(request):
         global model_performances_EN
         global GeneEffect_21q1
         global ccle_21q1_expression
+        global ccle_predictions_EN
 
         # for table 1 annotations
         global ccl_predicted_data_model_10xCV_paper
@@ -196,7 +198,7 @@ def process_data(request):
                 predictions_df = predictions_df.T
 
                 # call annotate_table function for elastic net models
-                result_df = annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1)
+                result_df = annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1, ccle_predictions_EN)
 
                 # Convert the result DataFrame to a JSON-serializable format
                 result_json = result_df.to_dict(orient='records')

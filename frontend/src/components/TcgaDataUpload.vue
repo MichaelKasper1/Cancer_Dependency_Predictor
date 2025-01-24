@@ -21,38 +21,40 @@
         </div>
       </div>
 
-      <!-- Column 2: Additional Dropdowns -->
+      <!-- Column 2: Select TCGA Project -->
       <div class="column">
-        <h3>Additional Options</h3>
+        <h3>Select TCGA Project</h3>
         <div class="input-group">
-          <label for="dropdown1" class="dropdown-label">Dropdown 1</label>
-          <select id="dropdown1" v-model="selectedOption1" class="dropdown-select">
-            <option value="" disabled selected>Select an Option</option>
-            <option v-for="option in filteredOptions1" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-          <input type="text" v-model="searchQuery1" placeholder="Search Options" class="dropdown-search" @input="filterOptions1">
+          <label for="dropdown1" class="dropdown-label">TCGA Project</label>
+          <v-autocomplete
+            v-model="selectedOption1"
+            :items="filteredOptions1"
+            label="Select an Option"
+            clearable
+          ></v-autocomplete>
+        </div>
+      </div>
+
+      <!-- Column 3: Select Gene Alteration(s) of Interest -->
+      <div class="column">
+        <h3>Select Gene Alteration(s) of Interest</h3>
+        <div class="input-group">
+          <label for="dropdown2" class="dropdown-label">Gene Alteration 1</label>
+          <v-autocomplete
+            v-model="selectedOption2"
+            :items="filteredOptions2"
+            label="Select an Option"
+            clearable
+          ></v-autocomplete>
         </div>
         <div class="input-group">
-          <label for="dropdown2" class="dropdown-label">Dropdown 2</label>
-          <select id="dropdown2" v-model="selectedOption2" class="dropdown-select">
-            <option value="" disabled selected>Select an Option</option>
-            <option v-for="option in filteredOptions2" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-          <input type="text" v-model="searchQuery2" placeholder="Search Options" class="dropdown-search" @input="filterOptions2">
-        </div>
-        <div class="input-group">
-          <label for="dropdown3" class="dropdown-label">Dropdown 3</label>
-          <select id="dropdown3" v-model="selectedOption3" class="dropdown-select">
-            <option value="" disabled selected>Select an Option</option>
-            <option v-for="option in filteredOptions3" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-          <input type="text" v-model="searchQuery3" placeholder="Search Options" class="dropdown-search" @input="filterOptions3">
+          <label for="dropdown3" class="dropdown-label">Gene Alteration 2 (Optional)</label>
+          <v-autocomplete
+            v-model="selectedOption3"
+            :items="filteredOptions3"
+            label="Select an Option"
+            clearable
+          ></v-autocomplete>
         </div>
       </div>
     </div>
@@ -60,7 +62,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
 
 export default defineComponent({
   data() {
@@ -72,9 +74,9 @@ export default defineComponent({
       searchQuery1: '',
       searchQuery2: '',
       searchQuery3: '',
-      options1: ['Option 1A', 'Option 1B', 'Option 1C'], // Placeholder options
-      options2: ['Option 2A', 'Option 2B', 'Option 2C'], // Placeholder options
-      options3: ['Option 3A', 'Option 3B', 'Option 3C'], // Placeholder options
+      options1: [] as string[], // Placeholder options
+      options2: [] as string[], // Placeholder options
+      options3: [] as string[], // Placeholder options
     };
   },
   computed: {
@@ -89,15 +91,45 @@ export default defineComponent({
     }
   },
   methods: {
-    filterOptions1() {
-      this.filteredOptions1;
+    fetchData() {
+      fetch('/api/get-column-names-tcga')
+        .then(response => response.json())
+        .then(data => {
+          console.log('Fetched data:', data); // Print the fetched data to the console for debugging
+          this.options1 = data.Cancer_types_tab3.map((item: { Cancer_types_tab3: string }) => item.Cancer_types_tab3);
+          this.options2 = data.select_gene_tab3.map((item: { select_gene_tab3: string }) => item.select_gene_tab3);
+          this.options3 = data.select_gene_tab3.map((item: { select_gene_tab3: string }) => item.select_gene_tab3);
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+        });
     },
-    filterOptions2() {
-      this.filteredOptions2;
-    },
-    filterOptions3() {
-      this.filteredOptions3;
+    submit() {
+      const payload = {
+        selectedModel: this.selectedModel,
+        selectedOption1: this.selectedOption1,
+        selectedOption2: this.selectedOption2,
+        selectedOption3: this.selectedOption3,
+      };
+
+      fetch('/api/submit-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Response from backend:', data);
+        })
+        .catch(error => {
+          console.error('Error submitting data:', error);
+        });
     }
+  },
+  mounted() {
+    this.fetchData();
   }
 });
 </script>

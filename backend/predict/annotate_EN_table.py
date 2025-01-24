@@ -1,7 +1,7 @@
 import pandas as pd
 import time
 
-def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1):
+def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1, ccle_predictions_EN):
     start = time.time()
 
     print("Model Performances EN:")
@@ -12,12 +12,15 @@ def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, c
     print(gene_annotations.head())
     print("Gene Effect 21Q1:")
     print(GeneEffect_21q1.head())
+    print("Predictions DataFrame:")
+    print(ccle_predictions_EN.head())
 
     # print shapes of all these
     print("Model Performances EN shape:", model_performances_EN.shape)
     print("CCLE 21Q1 Expression shape:", ccle_21q1_expression.shape)
     print("Gene Annotations shape:", gene_annotations.shape)
     print("Gene Effect 21Q1 shape:", GeneEffect_21q1.shape)
+    print("Predictions DataFrame shape:", ccle_predictions_EN.shape)
 
     # Clean the ccle_21q1_expression DataFrame
     ccle_21q1_expression.columns = [col.split(' ')[0] for col in ccle_21q1_expression.columns]
@@ -51,58 +54,60 @@ def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, c
         if col not in gene_annotations.columns:
             gene_annotations[col] = None
 
-    additional_columns = ["CCLE_pred_1376CCLs", "CCLE_real_1376CCLs"] # , "CCLE_real_996CCLs" not included
+    additional_columns = ["CCLE_pred_1376CCLs", "CCLE_real_1376CCLs"]
     final_columns = dynamic_columns + [
         "Prediction performance (Corr)", "Prediction DepMap percentile (CERES; n=1376)", "Predicted DepMap range (CERES; n=1376)",
         "Real DepMap percentile (CCLE; n=1376)", "Real DepMap range (CCLE; n=1376)", "Ensembl gene ID", 
         "Entrez gene ID", "Synonym", "Cancer syndrome", "Tissue type", "Molecular genetics", 
-        "Role in cancer", "Mutation types", "Translocation partner", "Other syndrome" # not included , "Real DepMap range (Chronos; n=996)"
+        "Role in cancer", "Mutation types", "Translocation partner", "Other syndrome"
     ]
 
     # Add new columns for percentiles
     result_df["Prediction_Percentile_1376_cell_lines"] = None
     result_df["Real_Percentile_1376_cell_lines"] = None
+    result_df["Prediction_Range_1376_cell_lines"] = None
 
-    # Check if ccle_21q1_expression is not empty
-    if not ccle_21q1_expression.empty:
-        # Calculate percentiles
-        for i, row in result_df.iterrows():
-            gene_symbol = row['gene']
-            if gene_symbol in ccle_21q1_expression.columns:
-                # Prediction values
-                pred_value = ccle_21q1_expression[gene_symbol]
-                # Ensure the values are floats
+    # Calculate percentiles and ranges
+    for i, row in result_df.iterrows():
+        gene_symbol = row['gene']
+        if gene_symbol in ccle_21q1_expression.columns:
+            # Prediction values
+            pred_value = ccle_21q1_expression[gene_symbol]
+            try:
+                pred_value = pred_value.astype(float)
+                average_score = float(row['Average_Score'])
+            except ValueError as e:
+                print(f"ValueError: {e} for gene_symbol: {gene_symbol}")
+                continue
+
+            percentile = sum(pred_value <= average_score) / len(pred_value)
+            result_df.at[i, "Prediction_Percentile_1376_cell_lines"] = round((1 - percentile) * 100, 2)
+
+            # Calculate range
+            min_val = round(pred_value.min(), 2)
+            max_val = round(pred_value.max(), 2)
+            result_df.at[i, "Prediction_Range_1376_cell_lines"] = f"[{min_val}, {max_val}]"
+
+            # Real (1376 cell lines)
+            if gene_symbol in GeneEffect_21q1.columns:
+                real_value = GeneEffect_21q1[gene_symbol]
                 try:
-                    pred_value = pred_value.astype(float)
-                    average_score = float(row['Average_Score'])
+                    real_value = real_value.astype(float)
                 except ValueError as e:
                     print(f"ValueError: {e} for gene_symbol: {gene_symbol}")
                     continue
 
-                percentile = sum(pred_value <= average_score) / len(pred_value)
-                result_df.at[i, "Prediction_Percentile_1376_cell_lines"] = round((1 - percentile) * 100, 2)
-
-                # Real (1376 cell lines)
-                if gene_symbol in GeneEffect_21q1.columns:
-                    real_value = GeneEffect_21q1[gene_symbol]
-                    # Ensure the values are floats
-                    try:
-                        real_value = real_value.astype(float)
-                    except ValueError as e:
-                        print(f"ValueError: {e} for gene_symbol: {gene_symbol}")
-                        continue
-
-                    percentile = sum(real_value <= average_score) / len(real_value)
-                    result_df.at[i, "Real_Percentile_1376_cell_lines"] = round((1 - percentile) * 100, 2)
-                else:
-                    # print(f"Gene symbol {gene_symbol} not found in GeneEffect_21q1")
-                    result_df.at[i, "Real_Percentile_1376_cell_lines"] = ""
+                percentile = sum(real_value <= average_score) / len(real_value)
+                result_df.at[i, "Real_Percentile_1376_cell_lines"] = round((1 - percentile) * 100, 2)
             else:
-                print(f"Gene symbol {gene_symbol} not found in ccle_21q1_expression")
-                result_df.at[i, "Prediction_Percentile_1376_cell_lines"] = ""
                 result_df.at[i, "Real_Percentile_1376_cell_lines"] = ""
-    else:
-        print("CCLE 21Q1 Expression DataFrame is empty. Skipping percentile calculations.")
+        else:
+            result_df.at[i, "Prediction_Percentile_1376_cell_lines"] = ""
+            result_df.at[i, "Real_Percentile_1376_cell_lines"] = ""
+            result_df.at[i, "Prediction_Range_1376_cell_lines"] = ""
+
+    # debug print the head of result_df
+    print(result_df.head())
 
     # Ensure 'Gene_Symbol' column exists in gene_annotations
     if 'Gene_Symbol' not in gene_annotations.columns:
@@ -121,13 +126,11 @@ def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, c
     # Rename columns to match the final desired column names
     column_rename_map = {
         "x": "Prediction performance (Corr)",
-        "Prediction_Percentile_TCGA": "Prediction Percentile TCGA",
+        # "Prediction_Percentile_TCGA": "Prediction Percentile TCGA",
         "Prediction_Percentile_1376_cell_lines":  "Prediction DepMap percentile (CERES; n=1376)",
-        "CCLE_pred_1376CCLs": "Predicted DepMap range (CERES; n=1376)",
+        "Prediction_Range_1376_cell_lines": "Predicted DepMap range (CERES; n=1376)",
         "Real_Percentile_1376_cell_lines": "Real DepMap percentile (CCLE; n=1376)",
         "CCLE_real_1376CCLs": "Real DepMap range (CCLE; n=1376)",
-        # "TCGA_pred_8238": "Prediction range (TCGA; n=8238)",
-        # "CCLE_real_996CCLs": "Real DepMap range (Chronos; n=996)",
         "ensembl_gene_id": "Ensembl gene ID",
         "entrezgene_id": "Entrez gene ID",
         "external_synonym": "Synonym",

@@ -79,14 +79,12 @@
         <h3>Select Gene Set</h3>
         <div class="input-group">
           <label for="gene-set" class="gene-set-label">Select gene set of interest for results</label>
-          <select id="gene-set" v-model="selectedGeneSet" class="gene-set-select">
-            <option value="" disabled selected>Select a Gene Set</option>
-            <option value="default-gene-set">1298 cancer associated genes from DeepDEP</option>
-            <option v-for="geneSet in filteredGeneSets" :key="geneSet" :value="geneSet">
-              {{ geneSet }}
-            </option>
-          </select>
-          <input type="text" v-model="searchQuery" placeholder="Filter Gene Sets" class="gene-set-search" @input="filterGeneSets">
+          <v-autocomplete
+            v-model="selectedGeneSet"
+            :items="filteredGeneSets"
+            label="Select a Gene Set"
+            clearable
+          ></v-autocomplete>
         </div>
       </div>
 
@@ -116,10 +114,14 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { VAutocomplete } from 'vuetify/components'; // Import VAutocomplete
 // @ts-ignore
 import EventBus from '../utils/eventBus';
 
 export default defineComponent({
+  components: {
+    VAutocomplete, // Register VAutocomplete
+  },
   data() {
     return {
       selectedModel: 'DeepDEP',

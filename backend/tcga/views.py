@@ -34,6 +34,7 @@ tcga_exp = load_mongo_data('tcga_exp')
 tcga_mut = load_mongo_data('tcga_mut')
 tcga_exp_sampleID = load_mongo_data('tcga_exp_sampleID')
 tcga_mut_sampleID = load_mongo_data('tcga_mut_sampleID')
+tcga_pred = load_mongo_data('tcga_pred')
 
 @require_http_methods(["GET"])
 def get_column_names_tcga(request):
@@ -43,33 +44,49 @@ def get_column_names_tcga(request):
     cancer_types_data = Cancer_types_tab3.to_dict(orient='records')
     select_gene_data = select_gene_tab3.to_dict(orient='records')
 
-    # Print the data to the console for debugging
-    print("Cancer_types_tab3 head:\n", Cancer_types_tab3.head())
-    print("select_gene_tab3 head:\n", select_gene_tab3.head())
-
     # Return the data as a JSON response
     return JsonResponse({
         'Cancer_types_tab3': cancer_types_data,
         'select_gene_tab3': select_gene_data,
     })
 
+# submit data happens automatically when TCGA Project and Gene Alteration 1 are selected.
 @csrf_exempt
 @require_http_methods(["POST"])
 def submit_data(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        selected_model = data.get('selectedModel')
-        selected_option1 = data.get('selectedOption1')
-        selected_option2 = data.get('selectedOption2')
-        selected_option3 = data.get('selectedOption3')
+        try:
+            data = json.loads(request.body)
+            selected_model = data.get('selectedModel')
+            selected_option1 = data.get('selectedOption1')
+            selected_option2 = data.get('selectedOption2')
+            selected_option3 = data.get('selectedOption3')
 
-        
+            # Call the sumTable function
+            dist_table = sumTable(
+                cancer_types=selected_option1,
+                select_gene1=selected_option2,
+                select_gene2=selected_option3,
+                tcga_clinicalData=tcga_clinicalData,
+                tcga_exp=tcga_exp,
+                tcga_mut=tcga_mut
+            )
 
-        # Print the received data for debugging
-        print("Received data:", data)
+            # Convert the result to JSON
+            dist_table_json = dist_table.to_json(orient='records')
 
-        # Process the data as needed
-        # ...
-
-        return JsonResponse({'status': 'success'})
+            # Include the selected data and sample group in the response
+            return JsonResponse({
+                'status': 'success',
+                'selectedModel': selected_model,
+                'selectedOption1': selected_option1,
+                'selectedOption2': selected_option2,
+                'selectedOption3': selected_option3,
+                'distTable': dist_table_json
+            })
+        except ValueError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+

@@ -9,10 +9,13 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+import logging
+logger = logging.getLogger(__name__)
 
 # load custom functions
 from .sumTable import sumTable
 from .chronosTable import chronosTable
+from .tcgaTable import tcgaTable
 from .geneEffect import geneEffect
 from .survival import survival
 
@@ -35,6 +38,8 @@ tcga_mut = load_mongo_data('tcga_mut')
 tcga_exp_sampleID = load_mongo_data('tcga_exp_sampleID')
 tcga_mut_sampleID = load_mongo_data('tcga_mut_sampleID')
 tcga_pred = load_mongo_data('tcga_pred')
+# LOAD ELASTIC NET MODELS HERE AND USE THEM IN THE FUNCTION TODO
+gene_annotations = load_mongo_data('gene_annotations')
 
 @require_http_methods(["GET"])
 def get_column_names_tcga(request):
@@ -63,7 +68,7 @@ def submit_data(request):
             selected_option3 = data.get('selectedOption3')
 
             # Call the sumTable function
-            dist_table = sumTable(
+            dist_table, sample_group = sumTable(
                 cancer_types=selected_option1,
                 select_gene1=selected_option2,
                 select_gene2=selected_option3,
@@ -72,8 +77,27 @@ def submit_data(request):
                 tcga_mut=tcga_mut
             )
 
+            # call the chronosTable python function to perform statistical tests
+            tcga_table_start, any_invalid_cases = chronosTable(
+                sample_group=sample_group,
+                tcga_pred=tcga_pred,
+                selected_model=selected_model,
+                tcga_pred_EN=tcga_pred
+            )
+
+            # call function to finish processing for tcga table by adding gene annotations and sorting
+            tcga_table = tcgaTable(
+                tcga_table_start=tcga_table_start,
+                dist_table=dist_table,
+                gene_annotations=gene_annotations
+            )
+
+            print(tcga_table)
+            print(any_invalid_cases)
+
             # Convert the result to JSON
             dist_table_json = dist_table.to_json(orient='records')
+            tcga_table_json = tcga_table.to_json(orient='records')
 
             # Include the selected data and sample group in the response
             return JsonResponse({
@@ -82,11 +106,12 @@ def submit_data(request):
                 'selectedOption1': selected_option1,
                 'selectedOption2': selected_option2,
                 'selectedOption3': selected_option3,
-                'distTable': dist_table_json
+                'distTable': dist_table_json,
+                'tcga_table': tcga_table_json
             })
+        
         except ValueError as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
-

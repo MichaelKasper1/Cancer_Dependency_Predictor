@@ -65,11 +65,13 @@
     <!-- TcgaSummary component -->
     <TcgaSummary
       v-if="selectedOption1 && selectedOption2 && distTable"
-      :selectedModel="selectedModel"
-      :selectedOption1="selectedOption1"
-      :selectedOption2="selectedOption2"
-      :selectedOption3="selectedOption3"
       :sampleGroup="distTable"
+    />
+
+    <!-- TcgaTable component -->
+    <TcgaTable
+      v-if="tcgaTable"
+      :tcgaTableJson="tcgaTable"
     />
   </div>
 </template>
@@ -77,10 +79,12 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue';
 import TcgaSummary from './TcgaSummary.vue';
+import TcgaTable from './TcgaTable.vue';
 
 export default defineComponent({
   components: {
-    TcgaSummary
+    TcgaSummary,
+    TcgaTable
   },
   data() {
     return {
@@ -94,7 +98,8 @@ export default defineComponent({
       options1: [] as string[], // Placeholder options
       options2: [] as string[], // Placeholder options
       options3: [] as string[], // Placeholder options
-      distTable: '' // Add this data property to store the distTable JSON
+      distTable: '', // Add this data property to store the distTable JSON
+      tcgaTable: '' // Add this data property to store the tcgaTable JSON
     };
   },
   computed: {
@@ -102,10 +107,14 @@ export default defineComponent({
       return this.options1.filter(option => option.toLowerCase().includes(this.searchQuery1.toLowerCase()));
     },
     filteredOptions2() {
-      return this.options2.filter(option => option.toLowerCase().includes(this.searchQuery2.toLowerCase()));
+      return this.options2
+        .filter(option => option.toLowerCase().includes(this.searchQuery2.toLowerCase()))
+        .filter(option => option !== this.selectedOption3); // Exclude selectedOption3
     },
     filteredOptions3() {
-      return this.options3.filter(option => option.toLowerCase().includes(this.searchQuery3.toLowerCase()));
+      return this.options3
+        .filter(option => option.toLowerCase().includes(this.searchQuery3.toLowerCase()))
+        .filter(option => option !== this.selectedOption2); // Exclude selectedOption2
     }
   },
   methods: {
@@ -152,6 +161,7 @@ export default defineComponent({
             this.selectedOption2 = data.selectedOption2;
             this.selectedOption3 = data.selectedOption3;
             this.distTable = data.distTable; // Update the distTable with the response data
+            this.tcgaTable = data.tcga_table; // Update the tcgaTable with the response data
           } else {
             console.error('Error:', data.message);
           }

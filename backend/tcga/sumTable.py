@@ -144,10 +144,6 @@ def sumTable(cancer_types=None, select_gene1=None, select_gene2=None, tcga_clini
         dist_table['groupNames'] = dist_table['groupNames'].replace({
             'zero': nameZero, '1': name1, '2': name2, '4': name4, '5': name5, '8': name8
         })
-
-    # Print dist_table for debugging
-    print("Distribution Table:")
-    print(dist_table)
     
-    # Return the distribution table
-    return dist_table
+    # Return both the distribution table and the sample group
+    return dist_table, sample_group

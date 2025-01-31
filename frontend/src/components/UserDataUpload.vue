@@ -5,16 +5,16 @@
       <div class="column">
         <h3>Choose Model</h3>
         <div class="input-group">
-          <label>
-            <input type="radio" value="DeepDEP" v-model="selectedModel">
+          <label for="model-deepdep">
+            <input id="model-deepdep" type="radio" value="DeepDEP" v-model="selectedModel">
             <a href="https://pubmed.ncbi.nlm.nih.gov/34417181/" target="_blank">DeepDEP</a>
           </label>
           <p>Chiu YC, et al. Sci Adv. 2021</p>
           
           <div class="spacer"></div>
           
-          <label>
-            <input type="radio" value="ElasticNetModels" v-model="selectedModel">
+          <label for="model-elasticnet">
+            <input id="model-elasticnet" type="radio" value="ElasticNetModels" v-model="selectedModel">
             <a href="https://pubmed.ncbi.nlm.nih.gov/39009815/" target="_blank">Elastic Net Models</a>
           </label>
           <p>Shi X, et al. Nat Cancer. 2024</p>
@@ -46,30 +46,30 @@
         <h3>Describe Data</h3>
         <div class="input-group">
           <p>Is your data log transformed?</p>
-          <label>
-            <input type="radio" value="not-log" v-model="logTransformed"> No
+          <label for="log-no">
+            <input id="log-no" type="radio" value="not-log" v-model="logTransformed"> No
           </label>
-          <label>
-            <input type="radio" value="log" v-model="logTransformed"> Yes
+          <label for="log-yes">
+            <input id="log-yes" type="radio" value="log" v-model="logTransformed"> Yes
           </label>
         </div>
         <div class="input-group">
-          <p>Is your data from cell lines or a tumors?</p>
-          <label>
-            <input type="radio" value="tumor" v-model="dataSource" :disabled="selectedModel === 'ElasticNetModels'"> Tumor
+          <p>Is your data from cell lines or tumors?</p>
+          <label for="data-tumor">
+            <input id="data-tumor" type="radio" value="tumor" v-model="dataSource" :disabled="selectedModel === 'ElasticNetModels'"> Tumor
           </label>
-          <label>
-            <input type="radio" value="cell-line" v-model="dataSource"> Cell Line
+          <label for="data-cell-line">
+            <input id="data-cell-line" type="radio" value="cell-line" v-model="dataSource"> Cell Line
           </label>
           <div v-if="selectedModel === 'ElasticNetModels'">Tumor predictions only available for DeepDEP.</div>
         </div>
         <div class="input-group">
           <p>Is your data a normalized expression unit?</p>
-          <label>
-            <input type="radio" value="TPM" v-model="expressionUnit"> TPM
+          <label for="unit-tpm">
+            <input id="unit-tpm" type="radio" value="TPM" v-model="expressionUnit"> TPM
           </label>
-          <label>
-            <input type="radio" value="FPKM" v-model="expressionUnit"> FPKM
+          <label for="unit-fpkm">
+            <input id="unit-fpkm" type="radio" value="FPKM" v-model="expressionUnit"> FPKM
           </label>
         </div>
       </div>
@@ -80,6 +80,7 @@
         <div class="input-group">
           <label for="gene-set" class="gene-set-label">Select gene set of interest for results</label>
           <v-autocomplete
+            id="gene-set"
             v-model="selectedGeneSet"
             :items="filteredGeneSets"
             label="Select a Gene Set"

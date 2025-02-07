@@ -11,7 +11,7 @@
       <table>
         <thead>
           <tr>
-            <th v-for="header in headers" :key="header" @click="sortTable(header)">
+            <th v-for="header in headers" :key="header">
               {{ header }}
               <span v-if="sortKey === header">
                 <i :class="sortOrder === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'"></i>
@@ -62,7 +62,8 @@ export default defineComponent({
       required: true
     }
   },
-  setup(props) {
+  emits: ['tableUpdated'],
+  setup(props, { emit }) {
     const tableData = ref<TableRow[]>([]);
     const headers = ref<string[]>([]);
     const currentPage = ref(1);
@@ -78,6 +79,7 @@ export default defineComponent({
         tableData.value = JSON.parse(props.tcgaTableJson);
         headers.value = Object.keys(tableData.value[0]);
         resultsReady.value = true;
+        emit('tableUpdated'); // Emit event when table is updated
       } catch (e) {
         console.error('Failed to parse tcgaTable JSON:', e);
       }
@@ -152,7 +154,27 @@ export default defineComponent({
     const selectRow = (row: TableRow) => {
       selectedRow.value = row;
       console.log('Selected row:', row);
-      // Emit an event or handle the selected row as needed
+
+      // Send the selected row to the backend
+      fetch('/api/get-visualization-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ selectedGene: row.Gene }),
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            console.log('Visualization data:', data);
+            // Handle the visualization data as needed
+          } else {
+            console.error('Error fetching visualization data:', data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching visualization data:', error);
+        });
     };
 
     return {

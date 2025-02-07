@@ -34,7 +34,7 @@ def tcgaTable(tcga_table_start, dist_table, gene_annotations):
                                tcga_table.columns[2]: f"{tcga_table.columns[2]} (average predicted CERES score)"}, inplace=True)
 
     # round the first 3 columns to 3 decimal points
-    tcga_table.iloc[:, :4] = tcga_table.iloc[:, :3].round(3)
+    tcga_table.iloc[:, :4] = tcga_table.iloc[:, :4].round(3)
 
     # rename chromosome_name to chromosome, ensembl_gene_id to ensembl id, external_synonym to synonym
     tcga_table.rename(columns={'chromosome_name': 'chromosome', 'ensembl_gene_id': 'ensembl id', 'external_synonym': 'synonym'}, inplace=True)

@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 from .sumTable import sumTable
 from .chronosTable import chronosTable
 from .tcgaTable import tcgaTable
-from .geneEffect import geneEffect
-from .survival import survival
+from .selected_gene_plots import tcga_boxplot
+from .selected_gene_plots import survival
 
 # load the tcga data into the view from the mongoDB
 def load_mongo_data(collection_name):
@@ -92,7 +92,7 @@ def submit_data(request):
                 gene_annotations=gene_annotations
             )
 
-            print(tcga_table)
+            # TODO print a message to users if there are any invalid cases in red below the sample group table.
             print(any_invalid_cases)
 
             # Convert the result to JSON
@@ -108,6 +108,42 @@ def submit_data(request):
                 'selectedOption3': selected_option3,
                 'distTable': dist_table_json,
                 'tcga_table': tcga_table_json
+            })
+        
+        except ValueError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def get_visualization_data(request):
+    if request.method == 'POST':
+        try:
+            print('starting the visualization function')
+            data = json.loads(request.body)
+            selected_gene = data.get('selectedGene')
+
+            # Perform data processing and create visualizations based on the selected gene
+            # Example: Generate a plotly graph
+
+            # function for bar
+            tcga_boxplot = tcga_boxplot(
+                
+            )
+
+            # function for survival
+            survival = survival(
+
+            )
+
+            return JsonResponse({
+                'status': 'success',
+                'selectedGene': selected_gene,
+                'tcga_boxplot': tcga_boxplot,
+                'survival': survival
+                # plotly 2
             })
         
         except ValueError as e:

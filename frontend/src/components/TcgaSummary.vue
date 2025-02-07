@@ -1,6 +1,6 @@
 <template>
   <div class="tcga-summary">
-    <h3>Sample Group Data</h3>
+    <h3>Sample Group</h3>
     <table v-if="distTable && distTable.length">
       <thead>
         <tr>

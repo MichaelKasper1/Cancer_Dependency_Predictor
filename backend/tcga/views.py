@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
+from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 # load custom functions
@@ -99,6 +100,10 @@ def submit_data(request):
             dist_table_json = dist_table.to_json(orient='records')
             tcga_table_json = tcga_table.to_json(orient='records')
 
+            # Cache the dist_table and tcga_table for 5 minutes
+            cache.set('dist_table', dist_table_json, timeout=300)  # 5 minutes
+            cache.set('tcga_table', tcga_table_json, timeout=300)  # 5 minutes
+
             # Include the selected data and sample group in the response
             return JsonResponse({
                 'status': 'success',
@@ -123,19 +128,40 @@ def get_visualization_data(request):
         try:
             print('starting the visualization function')
             data = json.loads(request.body)
+            print('1')
             selected_gene = data.get('selectedGene')
+            print('2')
 
-            # Perform data processing and create visualizations based on the selected gene
-            # Example: Generate a plotly graph
+            # Retrieve the dist_table and tcga_table from the cache
+            dist_table_json = cache.get('dist_table')
+            tcga_table_json = cache.get('tcga_table')
 
+            if dist_table_json is None or tcga_table_json is None:
+                raise ValueError("distTable or tcgaTable is missing in the cache")
+
+            # Convert JSON back to DataFrame
+            dist_table = pd.read_json(dist_table_json, orient='records')
+            tcga_table = pd.read_json(tcga_table_json, orient='records')
+
+            # Initialize variables
+            tcga_boxplot = None
+            survival = None
+            print('3')
             # function for bar
             tcga_boxplot = tcga_boxplot(
-                
+                selected_gene=selected_gene,
+                dist_table=dist_table,
+                tcga_pred=tcga_pred,
+                tcga_table=tcga_table,
+                selected_option1=data.get('selectedOption1'),
+                selected_option2=data.get('selectedOption2'),
+                selected_option3=data.get('selectedOption3')
             )
 
             # function for survival
             survival = survival(
-
+                selected_gene=selected_gene,
+                tcga_clinicalData=tcga_clinicalData
             )
 
             return JsonResponse({
@@ -143,11 +169,12 @@ def get_visualization_data(request):
                 'selectedGene': selected_gene,
                 'tcga_boxplot': tcga_boxplot,
                 'survival': survival
-                # plotly 2
             })
         
         except ValueError as e:
+            logger.error(f'ValueError: {str(e)}')
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
         except Exception as e:
+            logger.error(f'Exception: {str(e)}')
             return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred.'}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)

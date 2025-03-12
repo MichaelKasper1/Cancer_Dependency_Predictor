@@ -11,7 +11,7 @@
       <table>
         <thead>
           <tr>
-            <th v-for="header in headers" :key="header">
+            <th v-for="header in headers" :key="header" @click="sortTable(header)">
               {{ header }}
               <span v-if="sortKey === header">
                 <i :class="sortOrder === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'"></i>
@@ -43,11 +43,13 @@
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
       <button @click="nextPage" :disabled="currentPage === totalPages">Next</button>
     </div>
+    <TcgaPlotSelected v-if="plotData" :plotData="plotData" />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
+import TcgaPlotSelected from './TcgaPlotSelected.vue';
 
 interface TableRow {
   [key: string]: any;
@@ -56,6 +58,9 @@ interface TableRow {
 
 export default defineComponent({
   name: 'TcgaTable',
+  components: {
+    TcgaPlotSelected
+  },
   props: {
     tcgaTableJson: {
       type: String,
@@ -73,6 +78,7 @@ export default defineComponent({
     const selectedRow = ref<TableRow | null>(null);
     const sortKey = ref('');
     const sortOrder = ref<'asc' | 'desc'>('asc');
+    const plotData = ref(null);
 
     const parseTableData = () => {
       try {
@@ -167,7 +173,19 @@ export default defineComponent({
         .then(data => {
           if (data.status === 'success') {
             console.log('Visualization data:', data);
-            // Handle the visualization data as needed
+
+            try {
+              const parsedData = JSON.parse(data.tcga_boxplot); // Ensure parsing
+              if (parsedData && parsedData.data && parsedData.layout) {
+                plotData.value = parsedData; // Assign only valid objects
+              } else {
+                console.error('Invalid plotData format:', parsedData);
+                plotData.value = null; // Prevent breaking Vue
+              }
+            } catch (error) {
+              console.error('Error parsing tcga_boxplot:', error);
+              plotData.value = null;
+            }
           } else {
             console.error('Error fetching visualization data:', data.message);
           }
@@ -195,6 +213,7 @@ export default defineComponent({
       sortTable,
       selectRow,
       selectedRow,
+      plotData
     };
   }
 });

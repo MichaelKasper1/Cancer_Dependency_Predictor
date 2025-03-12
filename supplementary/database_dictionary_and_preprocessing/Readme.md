@@ -2,7 +2,7 @@
 
 ## **Data Dictionary**
 
-The django app uses a MongoDB database. These are data within the database:
+The django app uses a MongoDB database. These are the data (collections) within the database:
 
 - **gene_annotations** Comes from running the code described below within the Gene Annotation Table section.
 - **exp_file** Example data for example button. Right now, the data comes from the [code ocean]( https://codeocean.com/capsule/7914207/tree/v1).

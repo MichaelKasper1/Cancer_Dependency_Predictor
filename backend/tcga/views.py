@@ -31,7 +31,7 @@ db = client['mongodb']
 
 Cancer_types_tab3 = load_mongo_data('Cancer_types_tab3')
 select_gene_tab3 = load_mongo_data('select_gene_tab3')
-survival_data = load_mongo_data('survival_data')
+survival_data = load_mongo_data('survival')
 tcga_clinicalData = load_mongo_data('tcga_clinicalData')
 tcga_clinicalData_80 = load_mongo_data('tcga_clinicalData_80')
 tcga_exp = load_mongo_data('tcga_exp')
@@ -99,10 +99,17 @@ def submit_data(request):
             # Convert the result to JSON
             dist_table_json = dist_table.to_json(orient='records')
             tcga_table_json = tcga_table.to_json(orient='records')
+            sample_group_json = sample_group.to_json(orient='split')
 
-            # Cache the dist_table and tcga_table for 5 minutes
+            # Cache the dist_table, tcga_table, sample_group, and selected options for 5 minutes
             cache.set('dist_table', dist_table_json, timeout=300)  # 5 minutes
             cache.set('tcga_table', tcga_table_json, timeout=300)  # 5 minutes
+            cache.set('sample_group', sample_group_json, timeout=300)  # 5 minutes
+            cache.set('selected_option1', selected_option1, timeout=300)  # 5 minutes
+            cache.set('selected_option2', selected_option2, timeout=300)  # 5 minutes
+            cache.set('selected_option3', selected_option3, timeout=300)  # 5 minutes
+
+            logger.info('Cached dist_table, tcga_table, sample_group, and selected options')
 
             # Include the selected data and sample group in the response
             return JsonResponse({
@@ -126,49 +133,78 @@ def submit_data(request):
 def get_visualization_data(request):
     if request.method == 'POST':
         try:
-            print('starting the visualization function')
+            logger.info('Starting the visualization function')
             data = json.loads(request.body)
-            print('1')
+            logger.info('Request data parsed successfully')
             selected_gene = data.get('selectedGene')
-            print('2')
+            logger.info(f'Selected gene: {selected_gene}')
 
-            # Retrieve the dist_table and tcga_table from the cache
+            # Retrieve the dist_table, tcga_table, sample_group, and selected options from the cache
             dist_table_json = cache.get('dist_table')
             tcga_table_json = cache.get('tcga_table')
+            sample_group_json = cache.get('sample_group')
+            selected_option1 = cache.get('selected_option1')
+            selected_option2 = cache.get('selected_option2')
+            selected_option3 = cache.get('selected_option3')
 
-            if dist_table_json is None or tcga_table_json is None:
-                raise ValueError("distTable or tcgaTable is missing in the cache")
+            if dist_table_json is None or tcga_table_json is None or sample_group_json is None:
+                raise ValueError("distTable, tcgaTable, or sampleGroup is missing in the cache")
+
+            logger.info('Retrieved dist_table, tcga_table, sample_group, and selected options from cache')
 
             # Convert JSON back to DataFrame
             dist_table = pd.read_json(dist_table_json, orient='records')
             tcga_table = pd.read_json(tcga_table_json, orient='records')
+            sample_group = pd.read_json(sample_group_json, orient='split')
 
-            # Initialize variables
-            tcga_boxplot = None
-            survival = None
-            print('3')
-            # function for bar
-            tcga_boxplot = tcga_boxplot(
-                selected_gene=selected_gene,
-                dist_table=dist_table,
-                tcga_pred=tcga_pred,
-                tcga_table=tcga_table,
-                selected_option1=data.get('selectedOption1'),
-                selected_option2=data.get('selectedOption2'),
-                selected_option3=data.get('selectedOption3')
-            )
+            # Log the data being passed to the functions
+            logger.info(f'selected_gene: {selected_gene}')
+            logger.info(f'dist_table: {dist_table}')
+            logger.info(f'tcga_table: {tcga_table}')
+            logger.info(f'selected_option1: {selected_option1}')
+            logger.info(f'selected_option2: {selected_option2}')
+            logger.info(f'selected_option3: {selected_option3}')
 
-            # function for survival
-            survival = survival(
-                selected_gene=selected_gene,
-                tcga_clinicalData=tcga_clinicalData
-            )
+            # Initialize variables to prevent unassigned references
+            tcga_boxplot_result = None
+            survival_result = None
+
+            try:
+                # function for bar
+                tcga_boxplot_result = tcga_boxplot(
+                    selected_gene=selected_gene,
+                    dist_table=dist_table,
+                    tcga_pred=tcga_pred,
+                    # tcga_table=tcga_table,
+                    # selected_option1=selected_option1,
+                    # selected_option2=selected_option2,
+                    selected_option3=selected_option3,
+                    sample_group=sample_group
+                )
+                logger.info(f'tcga_boxplot returned: {tcga_boxplot_result}')
+            except Exception as e:
+                logger.error(f'Error in tcga_boxplot: {str(e)}')
+                tcga_boxplot_result = {'error': 'tcga_boxplot function failed'}
+
+            try:
+                # function for survival
+                survival_result = survival(
+                    selected_gene=selected_gene,
+                    cancer_types=selected_option1,
+                    survival_data=survival_data,
+                    tcga_clinicalData=tcga_clinicalData,
+                    tcga_pred=tcga_pred
+                )
+                logger.info('survival called')
+            except Exception as e:
+                logger.error(f'Error in survival: {str(e)}')
+                survival_result = {'error': 'survival function failed'}
 
             return JsonResponse({
                 'status': 'success',
                 'selectedGene': selected_gene,
-                'tcga_boxplot': tcga_boxplot,
-                'survival': survival
+                'tcga_boxplot': tcga_boxplot_result,
+                'survival': survival_result
             })
         
         except ValueError as e:

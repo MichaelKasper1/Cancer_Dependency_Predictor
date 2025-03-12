@@ -20,12 +20,15 @@ def tcgaTable(tcga_table_start, dist_table, gene_annotations):
     # Sort by p-value
     tcga_table_start.sort_values(by='pval', inplace=True)
 
-    # subset gene annotations to include 'chromosome_name', 'start_position', 'end_position', 'ensembl_gene_id', 'entrezgene_id', 'external_synonym', 'Name', 'Chr_Band', 'Somatic', 'Germline', 'Tumour_Types_Somatic', 'Tumour_Types_Germline', 'Cancer_Syndrome', 'Tissue_Type', 'Molecular_Genetics', 'Role_in_Cancer', 'Mutation_Types', 'Translocation_Partner', 'Other_Germline_Mut', 'Other_Syndrome'
+    # subset gene annotations
     gene_annotations_subset = gene_annotations[['Gene_Symbol','chromosome_name', 'start_position', 'end_position', 'ensembl_gene_id', 'entrezgene_id', 'external_synonym', 'Name', 'Chr_Band', 'Somatic', 'Germline', 'Tumour_Types_Somatic', 'Tumour_Types_Germline', 'Cancer_Syndrome', 'Tissue_Type', 'Molecular_Genetics', 'Role_in_Cancer', 'Mutation_Types', 'Translocation_Partner', 'Other_Germline_Mut', 'Other_Syndrome']]
+
+    # Assuming gene_annotations_subset is a slice of a DataFrame
+    gene_annotations_subset = gene_annotations_subset.copy()
+    gene_annotations_subset.rename(columns={'Gene_Symbol': 'Gene'}, inplace=True)
 
     # rename both gene_id as well as CRISPR_GENE to "Gene"
     tcga_table_start.rename(columns={'CRISPR_GENE': 'Gene'}, inplace=True)
-    gene_annotations_subset.rename(columns={'Gene_Symbol': 'Gene'}, inplace=True)
     
     tcga_table = pd.merge(tcga_table_start, gene_annotations_subset, on='Gene', how='left')
 

@@ -1,6 +1,16 @@
 <template>
-  <div v-if="plotData && plotData.data && plotData.layout" class="plot-container">
-    <div ref="plotlyChart"></div>
+  <div class="plot-container">
+    <!-- Boxplot -->
+    <div v-if="boxplotData && boxplotData.data && boxplotData.layout" class="plot-section">
+      <h3>Boxplot</h3>
+      <div ref="boxplotChart"></div>
+    </div>
+
+    <!-- Survival Plot -->
+    <div v-if="survivalData && survivalData.data && survivalData.layout" class="plot-section">
+      <h3>Survival Plot</h3>
+      <div ref="survivalChart"></div>
+    </div>
   </div>
 </template>
 
@@ -9,35 +19,61 @@ import Plotly from 'plotly.js-dist';
 
 export default {
   props: {
-    plotData: {
+    boxplotData: {
       type: Object,
       required: false,
-      default: () => ({ data: [], layout: {} }) // Default empty structure
+      default: () => ({ data: [], layout: {} }) // Default empty structure for boxplot
+    },
+    survivalData: {
+      type: Object,
+      required: false,
+      default: () => ({ data: [], layout: {} }) // Default empty structure for survival plot
     }
   },
   watch: {
-    plotData: {
-      handler(newPlotData) {
-        if (newPlotData && newPlotData.data && newPlotData.layout) {
-          this.$nextTick(() => { // Ensure DOM updates before rendering
-            this.renderPlot(newPlotData);
+    boxplotData: {
+      handler(newBoxplotData) {
+        if (newBoxplotData && newBoxplotData.data && newBoxplotData.layout) {
+          this.$nextTick(() => {
+            this.renderBoxplot(newBoxplotData);
           });
         } else {
-          console.error("Invalid plotData received:", newPlotData);
+          console.error("Invalid boxplotData received:", newBoxplotData);
+        }
+      },
+      immediate: true
+    },
+    survivalData: {
+      handler(newSurvivalData) {
+        if (newSurvivalData && newSurvivalData.data && newSurvivalData.layout) {
+          this.$nextTick(() => {
+            this.renderSurvivalPlot(newSurvivalData);
+          });
+        } else {
+          console.error("Invalid survivalData received:", newSurvivalData);
         }
       },
       immediate: true
     }
   },
   methods: {
-    renderPlot(plotData) {
-      const plotlyChart = this.$refs.plotlyChart;
-      if (!plotlyChart) {
-        console.error("Plotly div is not ready yet.");
+    renderBoxplot(plotData) {
+      const boxplotChart = this.$refs.boxplotChart;
+      if (!boxplotChart) {
+        console.error("Boxplot div is not ready yet.");
         return;
       }
-      Plotly.newPlot(plotlyChart, plotData.data, plotData.layout)
-        .catch(err => console.error("Plotly render error:", err));
+      Plotly.newPlot(boxplotChart, plotData.data, plotData.layout)
+        .catch(err => console.error("Plotly render error for boxplot:", err));
+    },
+    renderSurvivalPlot(plotData) {
+      const survivalChart = this.$refs.survivalChart;
+      if (!survivalChart) {
+        console.error("Survival plot div is not ready yet.");
+        return;
+      }
+      Plotly.newPlot(survivalChart, plotData.data, plotData.layout)
+        .catch(err => console.error("Plotly render error for survival plot:", err));
     }
   }
 };
@@ -46,6 +82,13 @@ export default {
 <style scoped>
 .plot-container {
   width: 100%;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.plot-section {
+  width: 100%;
+  height: 500px;
 }
 </style>

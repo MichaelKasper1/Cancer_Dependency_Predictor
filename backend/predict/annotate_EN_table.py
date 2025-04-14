@@ -4,24 +4,6 @@ import time
 def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, ccle_21q1_expression, GeneEffect_21q1, ccle_predictions_EN):
     start = time.time()
 
-    print("Model Performances EN:")
-    print(model_performances_EN.head())
-    print("CCLE 21Q1 Expression:")
-    print(ccle_21q1_expression.head())
-    print("Gene Annotations:")
-    print(gene_annotations.head())
-    print("Gene Effect 21Q1:")
-    print(GeneEffect_21q1.head())
-    print("Predictions DataFrame:")
-    print(ccle_predictions_EN.head())
-
-    # print shapes of all these
-    print("Model Performances EN shape:", model_performances_EN.shape)
-    print("CCLE 21Q1 Expression shape:", ccle_21q1_expression.shape)
-    print("Gene Annotations shape:", gene_annotations.shape)
-    print("Gene Effect 21Q1 shape:", GeneEffect_21q1.shape)
-    print("Predictions DataFrame shape:", ccle_predictions_EN.shape)
-
     # Clean the ccle_21q1_expression DataFrame
     ccle_21q1_expression.columns = [col.split(' ')[0] for col in ccle_21q1_expression.columns]
     result_df = predictions_df.copy()
@@ -105,9 +87,6 @@ def annotate_EN_table(predictions_df, gene_annotations, model_performances_EN, c
             result_df.at[i, "Prediction_Percentile_1376_cell_lines"] = ""
             result_df.at[i, "Real_Percentile_1376_cell_lines"] = ""
             result_df.at[i, "Prediction_Range_1376_cell_lines"] = ""
-
-    # debug print the head of result_df
-    print(result_df.head())
 
     # Ensure 'Gene_Symbol' column exists in gene_annotations
     if 'Gene_Symbol' not in gene_annotations.columns:

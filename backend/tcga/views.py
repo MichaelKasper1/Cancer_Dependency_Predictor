@@ -157,14 +157,6 @@ def get_visualization_data(request):
             tcga_table = pd.read_json(tcga_table_json, orient='records')
             sample_group = pd.read_json(sample_group_json, orient='split')
 
-            # Log the data being passed to the functions
-            logger.info(f'selected_gene: {selected_gene}')
-            logger.info(f'dist_table: {dist_table}')
-            logger.info(f'tcga_table: {tcga_table}')
-            logger.info(f'selected_option1: {selected_option1}')
-            logger.info(f'selected_option2: {selected_option2}')
-            logger.info(f'selected_option3: {selected_option3}')
-
             # Initialize variables to prevent unassigned references
             tcga_boxplot_result = None
             survival_result = None
@@ -181,7 +173,6 @@ def get_visualization_data(request):
                     selected_option3=selected_option3,
                     sample_group=sample_group
                 )
-                logger.info(f'tcga_boxplot returned: {tcga_boxplot_result}')
             except Exception as e:
                 logger.error(f'Error in tcga_boxplot: {str(e)}')
                 tcga_boxplot_result = {'error': 'tcga_boxplot function failed'}
@@ -196,6 +187,7 @@ def get_visualization_data(request):
                     tcga_pred=tcga_pred
                 )
                 logger.info('survival called')
+                logger.info(f'survival result: {survival_result}')
             except Exception as e:
                 logger.error(f'Error in survival: {str(e)}')
                 survival_result = {'error': 'survival function failed'}

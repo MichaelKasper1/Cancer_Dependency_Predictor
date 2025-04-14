@@ -7,6 +7,11 @@ import plotly.io as pio
 def tcga_boxplot(selected_gene, dist_table, tcga_pred, sample_group, selected_option3=False):
     print('tcga_boxplot called')
     
+    print(f"Selected gene: {selected_gene}")
+    print(f"dist_table head:\n{dist_table.head()}")
+    print(f"tcga_pred head:\n{tcga_pred.head()}")
+    print(f"sample_group head:\n{sample_group.head()}")
+
     # Check inputs
     if selected_gene is None:
         raise ValueError("selected_gene cannot be None")
@@ -54,21 +59,30 @@ def tcga_boxplot(selected_gene, dist_table, tcga_pred, sample_group, selected_op
         fig.add_trace(go.Box(
             y=group_data['select_crispr_gene'],
             name=group_name,
-            boxpoints='all',
+            boxpoints=False,  # Removes all individual points
             jitter=0.3,
             pointpos=-1.8
         ))
     
+    # Update layout
     fig.update_layout(
         title=f"Predicted Gene Dependency (CERES Score) for {selected_gene}",
         yaxis_title="Predicted Gene Dependency (CERES Score)",
-        showlegend=False
+        showlegend=False,
+        plot_bgcolor='white',  # Set the plot background to white
+        paper_bgcolor='white',  # Set the paper (outer) background to white
+        xaxis=dict(
+            gridcolor='white'  # Remove grid lines for the x-axis
+        ),
+        yaxis=dict(
+            gridcolor='white'  # Remove grid lines for the y-axis
+        )
     )
-    
+    print('done with tcga_boxplot function')
     return pio.to_json(fig)
 
 def survival(selected_gene, cancer_types, survival_data, tcga_clinicalData, tcga_pred):
-    
+
     if selected_gene is None:
         raise ValueError("selected_gene cannot be None")
     
@@ -76,8 +90,7 @@ def survival(selected_gene, cancer_types, survival_data, tcga_clinicalData, tcga
         tcga_clinicalData['bcr_patient_barcode'] if cancer_types == "PanCan"
         else tcga_clinicalData.loc[tcga_clinicalData['full_names'].astype(str) == str(cancer_types), 'full_bcr_patient_barcode'].str[:12]
     )
-    
-    print(selected_samples.head())
+    print(f"Selected samples for PanCan:\n{selected_samples}")
     
     if 'CRISPR_GENE' not in tcga_pred.columns:
         raise KeyError("CRISPR_GENE column missing in tcga_pred")
@@ -90,9 +103,6 @@ def survival(selected_gene, cancer_types, survival_data, tcga_clinicalData, tcga
     survival_predictions.columns = ['predicted_dependency']
     survival_predictions['bcr_patient_barcode'] = survival_predictions.index.str[:12]
     survival_predictions = survival_predictions[survival_predictions['bcr_patient_barcode'].isin(selected_samples)]
-    
-    print("Survival data columns:", survival_data.columns)
-    print("Survival predictions columns:", survival_predictions.columns)
 
     survival_data = survival_data.merge(survival_predictions, on='bcr_patient_barcode', how='inner').dropna(subset=['OS.time'])
     survival_data['OS.time'] /= 30  # Convert to months
@@ -123,6 +133,14 @@ def survival(selected_gene, cancer_types, survival_data, tcga_clinicalData, tcga
         title=f"Kaplan-Meier Estimates for {cancer_types} and {select_crispr_gene}",
         xaxis_title="Survival Duration (months)",
         yaxis_title="Survival Probability",
+        plot_bgcolor='white',  # Set the plot background to white
+        paper_bgcolor='white',  # Set the paper (outer) background to white
+        xaxis=dict(
+            gridcolor='white'  # Remove grid lines for the x-axis
+        ),
+        yaxis=dict(
+            gridcolor='white'  # Remove grid lines for the y-axis
+        ),
         annotations=[dict(x=max(kmf_high.survival_function_.index.max(), kmf_low.survival_function_.index.max()), y=0.9, text=f"Log-rank p: {log_rank_p:.3f}<br>HR: {hazard_ratio:.3f}", showarrow=False)]
     )
     

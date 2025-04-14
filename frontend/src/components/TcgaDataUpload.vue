@@ -64,13 +64,13 @@
 
     <!-- TcgaSummary component -->
     <TcgaSummary
-      v-if="selectedOption1 && selectedOption2 && distTable"
+      v-if="resultsReady && selectedOption1 && selectedOption2 && distTable"
       :sampleGroup="distTable"
     />
 
     <!-- TcgaTable component -->
     <TcgaTable
-      v-if="tcgaTable"
+      v-if="resultsReady && tcgaTable"
       :tcgaTableJson="tcgaTable"
     />
   </div>
@@ -99,7 +99,8 @@ export default defineComponent({
       options2: [] as string[], // Placeholder options
       options3: [] as string[], // Placeholder options
       distTable: '', // Add this data property to store the distTable JSON
-      tcgaTable: '' // Add this data property to store the tcgaTable JSON
+      tcgaTable: '', // Add this data property to store the tcgaTable JSON
+      resultsReady: false // Add this data property to track if results are ready
     };
   },
   computed: {
@@ -137,6 +138,9 @@ export default defineComponent({
         return;
       }
 
+      // Reset the resultsReady flag to hide the plots
+      this.resultsReady = false;
+
       const payload = {
         selectedModel: this.selectedModel,
         selectedOption1: this.selectedOption1,
@@ -162,6 +166,9 @@ export default defineComponent({
             this.selectedOption3 = data.selectedOption3;
             this.distTable = data.distTable; // Update the distTable with the response data
             this.tcgaTable = data.tcga_table; // Update the tcgaTable with the response data
+
+            // Set resultsReady to true to show the plots
+            this.resultsReady = true;
           } else {
             console.error('Error:', data.message);
           }
@@ -183,6 +190,16 @@ export default defineComponent({
     selectedOption2(newVal, oldVal) {
       if (newVal) {
         this.submitData();
+      }
+    },
+    selectedOption3(newVal, oldVal) {
+      if (newVal) {
+        this.submitData(); // Trigger backend request when Gene Alteration 2 changes
+      }
+    },
+    selectedModel(newVal, oldVal) {
+      if (newVal) {
+        this.submitData(); // Trigger backend request when the model changes
       }
     }
   }

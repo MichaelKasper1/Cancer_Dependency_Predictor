@@ -117,7 +117,6 @@ def create_density_plot_logic(result_df, gene, column, data_source, ccl_predicte
         # TCGA
         data = tcga_pred[tcga_pred['CRISPR_GENE'] == gene].iloc[:, 1:].values.flatten()
         data = pd.Series(data)
-        print(data)
         data = pd.to_numeric(data, errors='coerce').dropna()
         pre_dep = pd.to_numeric(result_df[result_df['gene'] == gene].iloc[0][column], errors='coerce')
         fig.add_trace(create_density_trace(data, '#BEBADA', 'rgba(190, 186, 218, 0.5)', 'DeepDep predicted CERES score in TCGA (n=8238)'))

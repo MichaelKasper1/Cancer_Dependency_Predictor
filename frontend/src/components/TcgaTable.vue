@@ -43,7 +43,11 @@
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
       <button @click="nextPage" :disabled="currentPage === totalPages">Next</button>
     </div>
-    <TcgaPlotSelected v-if="plotData" :plotData="plotData" />
+    <TcgaPlotSelected
+      v-if="plotData || survivalData"
+      :boxplotData="plotData"
+      :survivalData="survivalData"
+    />
   </div>
 </template>
 
@@ -79,13 +83,14 @@ export default defineComponent({
     const sortKey = ref('');
     const sortOrder = ref<'asc' | 'desc'>('asc');
     const plotData = ref(null);
+    const survivalData = ref(null);
 
     const parseTableData = () => {
       try {
         tableData.value = JSON.parse(props.tcgaTableJson);
         headers.value = Object.keys(tableData.value[0]);
         resultsReady.value = true;
-        emit('tableUpdated'); // Emit event when table is updated
+        emit('tableUpdated');
       } catch (e) {
         console.error('Failed to parse tcgaTable JSON:', e);
       }
@@ -172,19 +177,34 @@ export default defineComponent({
         .then(response => response.json())
         .then(data => {
           if (data.status === 'success') {
-            console.log('Visualization data:', data);
+            // console.log('Visualization data:', data);
 
+            // Handle boxplot data
             try {
-              const parsedData = JSON.parse(data.tcga_boxplot); // Ensure parsing
-              if (parsedData && parsedData.data && parsedData.layout) {
-                plotData.value = parsedData; // Assign only valid objects
+              const parsedBoxplotData = JSON.parse(data.tcga_boxplot);
+              if (parsedBoxplotData && parsedBoxplotData.data && parsedBoxplotData.layout) {
+                plotData.value = parsedBoxplotData;
               } else {
-                console.error('Invalid plotData format:', parsedData);
-                plotData.value = null; // Prevent breaking Vue
+                console.error('Invalid tcga_boxplot format:', parsedBoxplotData);
+                plotData.value = null;
               }
             } catch (error) {
               console.error('Error parsing tcga_boxplot:', error);
               plotData.value = null;
+            }
+
+            // Handle survival plot data
+            try {
+              const parsedSurvivalData = JSON.parse(data.survival);
+              if (parsedSurvivalData && parsedSurvivalData.data && parsedSurvivalData.layout) {
+                survivalData.value = parsedSurvivalData;
+              } else {
+                console.error('Invalid survival format:', parsedSurvivalData);
+                survivalData.value = null;
+              }
+            } catch (error) {
+              console.error('Error parsing survival:', error);
+              survivalData.value = null;
             }
           } else {
             console.error('Error fetching visualization data:', data.message);
@@ -213,7 +233,8 @@ export default defineComponent({
       sortTable,
       selectRow,
       selectedRow,
-      plotData
+      plotData,
+      survivalData
     };
   }
 });

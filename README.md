@@ -2,8 +2,7 @@
 
 ### Active Project
 
-Please note that this project is still in development. Some features are still in testing. Clone the repo and use the information under "develop" to download dependencies and run app locally if interested.
-
+Please note that this project is still in development. Some features are still in testing. Clone the repo and use the information under "develop" to download dependencies and run the application.
 
 ### Introduction
 
@@ -50,14 +49,21 @@ Download and install all necessary dependencies for the app:
     make install_macos
     ```
 
-Run django and vue development servers concurrently:
+Run django and vue development servers concurrently. I like to open two terminals side by side. Start the backend with:
 
     ```bash
-    make start
+    make runserver
     ```
 
-Follow link http://localhost:5173/ to access web application. 
-As you save changes to files, the app will reload automatically.
+Run the frondend with:
+
+    ```bash
+    make rundev
+    ```
+
+Follow link http://localhost:5173/ to access the web application.
+
+As you save changes to files, the app will reload automatically. The backend take a bit of time to start up.
 
 ### Learn
 

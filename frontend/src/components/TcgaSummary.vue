@@ -10,8 +10,8 @@
       </thead>
       <tbody>
         <tr v-for="(row, index) in distTable" :key="index">
-          <td>{{ row.groupNames }}</td>
-          <td>{{ row.n }}</td>
+          <td :colspan="row.group === 'Warning' ? 2 : 1">{{ row.groupNames }}</td>
+          <td v-if="row.group !== 'Warning'">{{ row.n }}</td>
         </tr>
       </tbody>
     </table>

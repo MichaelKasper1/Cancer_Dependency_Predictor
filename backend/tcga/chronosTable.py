@@ -8,12 +8,16 @@ import time
 def perform_anova(tcga_pred_select_t):
     """Perform one-way ANOVA across groups."""
     start_time = time.time()
+
     def anova_for_column(col):
         groups = [group[col].values for _, group in tcga_pred_select_t.groupby("group")]
         _, p_value = stats.f_oneway(*groups)
         return p_value
     
-    columns = tcga_pred_select_t.columns[:-3]  # Exclude 'gene1', 'group1', 'group'
+    # Exclude specific columns by name
+    columns_to_exclude = ['gene1', 'group1', 'group', 'gene2', 'group2']
+    columns = [col for col in tcga_pred_select_t.columns if col not in columns_to_exclude]
+
     pvals = Parallel(n_jobs=-1)(delayed(anova_for_column)(col) for col in columns)
 
     end_time = time.time()
@@ -82,4 +86,5 @@ def chronosTable(sample_group=None, tcga_pred=None, selected_model=None, tcga_pr
 
     # Reorder columns
     final_cols = ["index", "CRISPR_GENE"] + list(group_means.columns) + ["pval"]
+    print('Returning from chronosTable function')
     return tcga_pred_select[final_cols], any_invalid_cases

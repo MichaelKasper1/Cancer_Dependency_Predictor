@@ -6,7 +6,7 @@ Please note that this project is still in development. Some features are still i
 
 ### Introduction
 
-This web application is open source. It is designed to predict, prioritize, analyze, and interpret cancer genetic dependencies through the two main tools:
+This web application is open source. It is designed to predict, prioritize, analyze, and interpret cancer genetic dependencies through the two main tools :
 - Cancer Gene Dependency Predictor which allows users to select from modern machine learning algorithms to predict and analyze predictions of cancer gene dependencies.
 - TCGA Dependency Explorer which provides an exploration tool for identifying significantly intensified gene dependencies in tumors from The Cancer Genome Atlas dataset with specific alterations.
 
@@ -61,7 +61,7 @@ Run the frondend with:
     make rundev
     ```
 
-Follow link http://localhost:5173/ to access the web application.
+Follow the blue link http://localhost:5173/ from the "rundev" terminal to access the web application.
 
 As you save changes to files, the app will reload automatically. The backend take a bit of time to start up.
 

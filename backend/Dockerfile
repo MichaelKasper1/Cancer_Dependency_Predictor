@@ -19,10 +19,10 @@ COPY . /app
 
 # 6. Set environment variables (optional)
 # Set the Django settings module for production or development (adjust accordingly)
-ENV DJANGO_SETTINGS_MODULE=your_project_name.settings.production
+ENV DJANGO_SETTINGS_MODULE=backend.settings.production
 
 # 7. Expose port (usually 8000 for Django)
 EXPOSE 8000
 
 # 8. Run the Django server using gunicorn for production
-CMD ["gunicorn", "your_project_name.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
